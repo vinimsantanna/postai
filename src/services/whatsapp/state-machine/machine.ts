@@ -5,6 +5,10 @@ import { whatsappService } from '@/services/whatsapp/whatsapp.service';
 import { persistMedia } from '@/services/whatsapp/media-handler';
 import { runPublish } from '@/services/publishing/publisher.service';
 import { retryFailedPlatforms } from '@/services/notifications/whatsapp-notifier';
+import { parseDate, formatDate } from '@/services/whatsapp/date-parser';
+import { schedulePost, cancelScheduledPost, listScheduledCampaigns } from '@/services/scheduling/scheduler.service';
+import { campaignRepository } from '@/repositories/campaign.repository';
+import type { Platform } from '@prisma/client';
 import { MESSAGES, MENU_TEXT } from './messages';
 
 type SessionWithUser = WhatsappSession & { user: User };
@@ -35,6 +39,12 @@ export async function processMessage(
     case 'waiting_schedule':
       await handleWaitingSchedule(session, message, draft);
       break;
+    case 'waiting_schedule_date':
+      await handleWaitingScheduleDate(session, message, draft);
+      break;
+    case 'confirm_schedule':
+      await handleConfirmSchedule(session, message, draft);
+      break;
     case 'confirm_publish':
       await handleConfirmPublish(session, message, draft);
       break;
@@ -58,6 +68,29 @@ async function handleMenu(
 ): Promise<void> {
   const input = message.text?.trim() ?? '';
 
+  // "cancelar N" command — cancel scheduled post by index
+  const cancelMatch = input.match(/^cancelar\s+(\d+)$/i);
+  if (cancelMatch) {
+    const index = parseInt(cancelMatch[1], 10);
+    const scheduled = await listScheduledCampaigns(session.userId);
+    const target = scheduled.find((s) => s.index === index);
+    if (!target) {
+      await whatsappService.sendText(message.from, `❌ Agendamento ${index} não encontrado.`);
+    } else {
+      const removed = await cancelScheduledPost(target.campaignId);
+      if (removed) {
+        await campaignRepository.setResults(target.campaignId, {}, 'CANCELLED');
+        await whatsappService.sendText(
+          message.from,
+          `✅ Agendamento do ${target.formattedDate} cancelado.`,
+        );
+      } else {
+        await whatsappService.sendText(message.from, '❌ Não foi possível cancelar. O post pode já ter sido publicado.');
+      }
+    }
+    return;
+  }
+
   // "retentar" command — re-publish only failed platforms from last campaign
   if (input === 'retentar' || input === 'retry') {
     const lastCampaignId = draft.lastCampaignId;
@@ -80,17 +113,28 @@ async function handleMenu(
       await whatsappService.sendText(message.from, MESSAGES.ASK_COPY);
       break;
     case '2':
-      await transitionTo(session, 'waiting_schedule', {});
+      await transitionTo(session, 'waiting_schedule', { isScheduled: true });
       await whatsappService.sendText(message.from, MESSAGES.ASK_SCHEDULED_COPY);
       break;
-    case '3':
+    case '3': {
       await transitionTo(session, 'history', null);
       await whatsappService.sendText(message.from, MESSAGES.HISTORY_LOADING);
-      // History lookup happens here — simplified for MVP
-      await whatsappService.sendText(message.from, MESSAGES.HISTORY_EMPTY);
-      await transitionTo(session, 'menu', null);
+      const scheduled = await listScheduledCampaigns(session.userId);
+      if (scheduled.length === 0) {
+        await whatsappService.sendText(message.from, MESSAGES.HISTORY_EMPTY);
+      } else {
+        const lines = ['📅 *Posts agendados:*', ''];
+        for (const s of scheduled) {
+          const platformNames = s.platforms.join(', ');
+          lines.push(`${s.index}. ${s.formattedDate} — ${platformNames}`);
+        }
+        lines.push('', 'Para cancelar: *cancelar 1* (ou o número do post)');
+        await whatsappService.sendText(message.from, lines.join('\n'));
+      }
+      await transitionTo(session, 'menu', draft);
       await whatsappService.sendText(message.from, MENU_TEXT(session.user.name));
       break;
+    }
     default:
       await whatsappService.sendText(message.from, MENU_TEXT(session.user.name));
   }
@@ -164,8 +208,15 @@ async function handleWaitingThumbnail(
     newDraft = { ...draft, thumbnailUrl: permanentUrl };
   }
   // "pular" or any text = skip thumbnail
-  await transitionTo(session, 'confirm_publish', newDraft);
-  await whatsappService.sendText(message.from, confirmMessage(newDraft));
+
+  if (newDraft.isScheduled) {
+    // Scheduled flow: ask for date next
+    await transitionTo(session, 'waiting_schedule_date', newDraft);
+    await whatsappService.sendText(message.from, MESSAGES.ASK_SCHEDULE_DATE);
+  } else {
+    await transitionTo(session, 'confirm_publish', newDraft);
+    await whatsappService.sendText(message.from, confirmMessage(newDraft));
+  }
 }
 
 async function handleWaitingSchedule(
@@ -180,6 +231,106 @@ async function handleWaitingSchedule(
   const newDraft = { ...draft, copy: message.text };
   await transitionTo(session, 'waiting_video', newDraft);
   await whatsappService.sendText(message.from, MESSAGES.ASK_VIDEO);
+}
+
+async function handleWaitingScheduleDate(
+  session: SessionWithUser,
+  message: ParsedMessage,
+  draft: CampaignDraft,
+): Promise<void> {
+  if (!message.text) {
+    await whatsappService.sendText(message.from, MESSAGES.INVALID_DATE);
+    return;
+  }
+
+  const date = parseDate(message.text);
+  if (!date) {
+    await whatsappService.sendText(message.from, MESSAGES.INVALID_DATE);
+    return;
+  }
+
+  const newDraft = { ...draft, scheduledAt: date.toISOString() };
+  await transitionTo(session, 'confirm_schedule', newDraft);
+
+  const formatted = formatDate(date);
+  const platforms = (draft.platforms ?? ['Instagram', 'TikTok', 'LinkedIn', 'YouTube']).join(', ');
+  await whatsappService.sendText(
+    message.from,
+    [
+      `📋 *Confirme o agendamento:*`,
+      '',
+      `📝 *Legenda:* ${(draft.copy ?? '').slice(0, 80)}...`,
+      `🎬 *Vídeo:* ✅`,
+      `📅 *Data:* ${formatted}`,
+      `📱 *Plataformas:* ${platforms}`,
+      '',
+      'Digite *confirmar* para agendar ou *cancelar* para desistir.',
+    ].join('\n'),
+  );
+}
+
+async function handleConfirmSchedule(
+  session: SessionWithUser,
+  message: ParsedMessage,
+  draft: CampaignDraft,
+): Promise<void> {
+  const input = (message.text ?? '').toLowerCase().trim();
+
+  if (input === 'confirmar' || input === 'ok' || input === 'sim' || input === '1') {
+    if (!draft.scheduledAt) {
+      await transitionTo(session, 'menu', null);
+      await whatsappService.sendText(message.from, MESSAGES.ERROR_GENERAL);
+      return;
+    }
+
+    const scheduledAt = new Date(draft.scheduledAt);
+    const platforms = (draft.platforms ?? ['INSTAGRAM', 'TIKTOK', 'LINKEDIN', 'YOUTUBE']) as Platform[];
+
+    // Create campaign with SCHEDULED status
+    const campaign = await campaignRepository.create({
+      userId: session.userId,
+      clientId: session.activeClientId ?? undefined,
+      copy: draft.copy ?? '',
+      videoUrl: draft.videoUrl,
+      thumbnailUrl: draft.thumbnailUrl,
+      platforms,
+      scheduledAt,
+    });
+
+    // Update status to SCHEDULED
+    await campaignRepository.setResults(campaign.id, {}, 'SCHEDULED');
+
+    // Create BullMQ delayed job
+    await schedulePost({
+      campaignId: campaign.id,
+      userId: session.userId,
+      phoneNumber: message.from,
+      scheduledAt,
+      clientId: session.activeClientId ?? undefined,
+    });
+
+    const formatted = formatDate(scheduledAt);
+    await transitionTo(session, 'menu', { lastCampaignId: campaign.id });
+    await whatsappService.sendText(
+      message.from,
+      [
+        `✅ *Agendado com sucesso!*`,
+        '',
+        `📅 ${formatted}`,
+        `📱 Plataformas: ${platforms.join(', ')}`,
+        '',
+        `Para cancelar: acesse o menu e escolha *3* ou envie *cancelar 1*`,
+      ].join('\n'),
+    );
+    await whatsappService.sendText(message.from, MENU_TEXT(session.user.name));
+  } else if (input === 'cancelar' || input === 'não' || input === 'nao' || input === '2') {
+    await transitionTo(session, 'menu', null);
+    await whatsappService.sendText(message.from, MESSAGES.PUBLISH_CANCELLED);
+    await whatsappService.sendText(message.from, MENU_TEXT(session.user.name));
+  } else {
+    // Resend confirmation
+    await handleWaitingScheduleDate(session, { ...message, text: draft.scheduledAt }, draft);
+  }
 }
 
 async function handleConfirmPublish(

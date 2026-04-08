@@ -49,6 +49,8 @@ export type ConversationState =
   | 'waiting_video'
   | 'waiting_thumbnail'
   | 'waiting_schedule'
+  | 'waiting_schedule_date'
+  | 'confirm_schedule'
   | 'confirm_publish'
   | 'history';
 
@@ -57,8 +59,9 @@ export interface CampaignDraft {
   videoUrl?: string;
   thumbnailUrl?: string;
   platforms?: string[];
-  scheduledAt?: string;
-  lastCampaignId?: string; // set after publish so user can "retentar"
+  scheduledAt?: string;      // ISO string UTC
+  isScheduled?: boolean;     // true when coming from option '2'
+  lastCampaignId?: string;   // set after publish so user can "retentar"
 }
 
 // ============================================================

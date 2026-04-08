@@ -45,9 +45,14 @@ export const campaignRepository = {
     results: Record<string, PublishResult>,
     status: CampaignStatus,
   ) {
+    const isTerminal = status === 'PUBLISHED' || status === 'PARTIAL_FAILURE' || status === 'FAILED';
     return prisma.campaign.update({
       where: { id },
-      data: { status, results: results as object, publishedAt: new Date() },
+      data: {
+        status,
+        results: results as object,
+        ...(isTerminal && { publishedAt: new Date() }),
+      },
     });
   },
 

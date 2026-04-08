@@ -29,6 +29,12 @@ export const MESSAGES = {
   ERROR_GENERAL:
     '⚠️ Algo deu errado. Por favor, tente novamente ou comece do menu principal digitando *menu*.',
 
+  ASK_SCHEDULE_DATE:
+    '📅 Para quando você quer agendar?\n\nExemplos:\n• amanhã 18h\n• 10/04 14:30\n• próxima segunda 9h',
+
+  INVALID_DATE:
+    '⚠️ Data inválida ou no passado. Informe uma data futura.\n\nExemplos: *amanhã 18h*, *10/04 14:30*, *próxima segunda 9h*',
+
   UNREGISTERED:
     '👋 Olá! Para usar o PostAI, você precisa criar sua conta em *postai.app*.\n\nApós o cadastro, volte aqui e envie seu CPF para começar!',
 

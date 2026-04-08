@@ -97,7 +97,7 @@ describe('State Machine', () => {
       expect(sessionRepository.updateStep).toHaveBeenCalledWith(
         'session-1',
         'waiting_schedule',
-        {},
+        { isScheduled: true },
       );
     });
 

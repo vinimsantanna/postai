@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import app from '@/api/app';
 import prisma from '@/lib/prisma';
+import { startSchedulerWorker } from '@/services/scheduling/job-processor';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 
@@ -17,6 +18,14 @@ async function main(): Promise<void> {
   } catch (err) {
     console.error('[db] Could not connect to PostgreSQL:', err);
     console.warn('[db] Server running without DB — configure DATABASE_URL');
+  }
+
+  // Start BullMQ scheduler worker (non-fatal if Redis unavailable)
+  try {
+    startSchedulerWorker();
+    console.log('[scheduler] BullMQ worker started');
+  } catch (err) {
+    console.warn('[scheduler] Could not start worker — configure REDIS_URL:', err);
   }
 
   // Graceful shutdown
