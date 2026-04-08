@@ -1,0 +1,179 @@
+// PostAI — Prisma Schema
+// PostgreSQL (Supabase no MVP, RDS na escala)
+// Migração futura: só trocar DATABASE_URL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum Plan {
+  FREE
+  CREATOR   // R$49/mês
+  BUSINESS  // R$149/mês
+  AGENCY    // R$399/mês — até 10 clientes
+  AGENCY_PRO
+}
+
+enum UserStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum SessionStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  YOUTUBE
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  PARTIAL_FAILURE
+  FAILED
+  CANCELLED
+}
+
+// ============================================================
+// Models
+// ============================================================
+
+model User {
+  id                   String     @id @default(uuid())
+  email                String     @unique
+  cpf                  String     @unique  // AES-256 encrypted
+  cpfMasked            String              // "739.885.483-09" (display)
+  name                 String
+  passwordHash         String
+  plan                 Plan       @default(FREE)
+  status               UserStatus @default(PENDING_PAYMENT)
+  stripeCustomerId     String?    @unique
+  stripeSubscriptionId String?    @unique
+  deletedAt            DateTime?           // LGPD soft delete
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  sessions      WhatsappSession[]
+  apiTokens     ApiToken[]
+  campaigns     Campaign[]
+  agencyClients AgencyClient[]
+  refreshTokens RefreshToken[]
+
+  @@index([cpf])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model WhatsappSession {
+  id             String        @id @default(uuid())
+  userId         String
+  phoneNumber    String        // número WhatsApp normalizado (551199999999)
+  currentStep    String        @default("menu")
+  campaignDraft  Json?         // rascunho em andamento
+  activeClientId String?       // agências: cliente selecionado
+  status         SessionStatus @default(ACTIVE)
+  deletedAt      DateTime?
+  sessionStarted DateTime      @default(now())
+  lastMessage    DateTime      @default(now())
+
+  user         User          @relation(fields: [userId], references: [id])
+  activeClient AgencyClient? @relation(fields: [activeClientId], references: [id])
+
+  @@index([phoneNumber, status])
+  @@index([userId, status])
+}
+
+model ApiToken {
+  id           String    @id @default(uuid())
+  userId       String
+  clientId     String?   // null = token do próprio user; preenchido = cliente de agência
+  platform     Platform
+  accountName  String    // "@seu_perfil"
+  accessToken  String    // AES-256 encrypted
+  refreshToken String?   // AES-256 encrypted
+  expiresAt    DateTime?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user   User          @relation(fields: [userId], references: [id])
+  client AgencyClient? @relation(fields: [clientId], references: [id])
+
+  @@unique([userId, platform, clientId])
+  @@index([userId])
+  @@index([clientId])
+}
+
+model AgencyClient {
+  id           String    @id @default(uuid())
+  agencyUserId String
+  name         String
+  segment      String?
+  notes        String?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  agencyUser User              @relation(fields: [agencyUserId], references: [id])
+  tokens     ApiToken[]
+  campaigns  Campaign[]
+  sessions   WhatsappSession[]
+
+  @@index([agencyUserId])
+}
+
+model Campaign {
+  id           String         @id @default(uuid())
+  userId       String
+  clientId     String?
+  originalCopy String
+  videoUrl     String?        // Supabase Storage URL
+  thumbnailUrl String?
+  platforms    Platform[]
+  status       CampaignStatus @default(DRAFT)
+  scheduledAt  DateTime?
+  publishedAt  DateTime?
+  results      Json?          // { instagram: { success, postId, url }, ... }
+  n8nJobId     String?        // ID no n8n para cancelamento de agendamento
+  deletedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user   User          @relation(fields: [userId], references: [id])
+  client AgencyClient? @relation(fields: [clientId], references: [id])
+
+  @@index([userId, status])
+  @@index([clientId])
+  @@index([scheduledAt, status])
+}

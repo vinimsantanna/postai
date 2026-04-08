@@ -1,0 +1,52 @@
+export const MESSAGES = {
+  WELCOME: (name: string) =>
+    `Olá, *${name}*! 👋 Bem-vindo ao PostAI.\n\nPublique em todas as suas redes sociais direto pelo WhatsApp! ✨`,
+
+  ASK_COPY: '✍️ Ótimo! Me manda a *legenda* do seu post (texto completo com hashtags):',
+
+  ASK_SCHEDULED_COPY: '⏰ Vamos agendar! Me manda a *legenda* do post:',
+
+  ASK_VIDEO: '🎬 Agora me manda o *vídeo* que você quer publicar:',
+
+  ASK_THUMBNAIL:
+    '🖼️ Quer enviar uma *thumbnail*? (Opcional — mande a imagem ou escreva "pular"):',
+
+  COPY_TOO_SHORT: '❌ A legenda precisa ter pelo menos 3 caracteres. Tente novamente:',
+
+  VIDEO_REQUIRED: '❌ Por favor, envie um *vídeo* (não texto ou imagem):',
+
+  PUBLISHING_STARTED:
+    '🚀 *Publicando!*\n\nEstou publicando em todas as suas redes agora. Você receberá uma confirmação com os links em breve!',
+
+  PUBLISH_CANCELLED: '❌ Publicação cancelada.',
+
+  HISTORY_LOADING: '📊 Buscando seu histórico...',
+
+  HISTORY_EMPTY: 'Você ainda não tem publicações. Use a opção *1* para publicar agora!',
+
+  SELECT_CLIENT_INVALID: '❌ Por favor, escolha um número válido da lista de clientes.',
+
+  ERROR_GENERAL:
+    '⚠️ Algo deu errado. Por favor, tente novamente ou comece do menu principal digitando *menu*.',
+
+  UNREGISTERED:
+    '👋 Olá! Para usar o PostAI, você precisa criar sua conta em *postai.app*.\n\nApós o cadastro, volte aqui e envie seu CPF para começar!',
+
+  ASK_CPF:
+    'Bem-vindo ao PostAI! 🚀\n\nPara identificar sua conta, me informe seu *CPF* (apenas números):',
+
+  CPF_NOT_FOUND: (cpf: string) =>
+    `❌ CPF *${cpf}* não encontrado.\n\nAcesse *postai.app* para criar sua conta ou verifique o CPF digitado.`,
+
+  CPF_INACTIVE: '⚠️ Sua conta está inativa. Verifique sua assinatura em *postai.app*.',
+};
+
+export function MENU_TEXT(name: string): string {
+  return [
+    `Olá, *${name}*! O que você quer fazer? 👇`,
+    '',
+    '1️⃣ Publicar agora',
+    '2️⃣ Agendar publicação',
+    '3️⃣ Ver histórico',
+  ].join('\n');
+}
