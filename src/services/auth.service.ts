@@ -3,7 +3,9 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import { userRepository } from '@/repositories/user.repository';
+import { billingService } from '@/services/billing.service';
 import type { JwtPayload } from '@/domain/types';
+import type { Plan } from '@prisma/client';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 48;
@@ -34,7 +36,7 @@ async function createRefreshToken(userId: string): Promise<string> {
 }
 
 export const authService = {
-  async register(input: { email: string; password: string; name: string; cpf: string }) {
+  async register(input: { email: string; password: string; name: string; cpf: string; plan: Plan }) {
     const existing = await userRepository.findByEmail(input.email);
     if (existing) throw Object.assign(new Error('Email already registered'), { status: 409 });
 
@@ -49,11 +51,15 @@ export const authService = {
       passwordHash,
     });
 
-    const payload: JwtPayload = { sub: user.id, email: user.email, plan: user.plan };
-    const accessToken = signAccessToken(payload);
-    const refreshToken = await createRefreshToken(user.id);
+    const appUrl = process.env.APP_URL ?? 'https://postai-production-a966.up.railway.app';
+    const { url: checkoutUrl } = await billingService.createCheckoutSession(
+      user.id,
+      input.plan,
+      `${appUrl}/billing/success`,
+      `${appUrl}/billing/cancelled`,
+    );
 
-    return { accessToken, refreshToken, user: { id: user.id, email: user.email, name: user.name, plan: user.plan } };
+    return { checkoutUrl, userId: user.id };
   },
 
   async login(input: { email: string; password: string }) {

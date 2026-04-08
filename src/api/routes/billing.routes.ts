@@ -7,6 +7,8 @@ const router = Router();
 
 // Public
 router.get('/plans', billingController.getPlans);
+router.get('/success', billingController.checkoutSuccess);
+router.get('/cancelled', billingController.checkoutCancelled);
 
 // Stripe webhook — needs raw body, NOT json parser
 router.post(

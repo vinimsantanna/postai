@@ -1,12 +1,19 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { authService } from '@/services/auth.service';
+import { validateCpf } from '@/lib/cpf';
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(2),
-  cpf: z.string().regex(/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'Invalid CPF format'),
+  cpf: z.string()
+    .regex(/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'Invalid CPF format')
+    .refine(validateCpf, 'Invalid CPF'),
+  plan: z.enum([
+    'CREATOR_STARTER', 'CREATOR_PRO', 'CREATOR_FULL',
+    'BUSINESS_PLAY', 'BUSINESS_ENTERPRISE', 'AGENCY_SYMPHONY',
+  ]),
 });
 
 const loginSchema = z.object({

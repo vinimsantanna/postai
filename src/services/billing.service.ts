@@ -1,6 +1,7 @@
 import type { Plan, UserStatus } from '@prisma/client';
 import { getStripe } from '@/lib/stripe';
 import { TRIAL_DAYS, TRIAL_PLAN, PLANS } from '@/domain/plans';
+import { emailService } from '@/services/email.service';
 import prisma from '@/lib/prisma';
 
 // Maps our Plan enum to Stripe Price IDs (set via env vars after running setup-stripe script)
@@ -136,8 +137,21 @@ async function handleSubscriptionUpdate(sub: any) {
     default: status = 'PENDING_PAYMENT';
   }
 
+  const previousStatus = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { status: true, email: true, name: true },
+  });
+
   await prisma.user.update({
     where: { id: userId },
     data: { plan: planKey, status, stripeSubscriptionId: sub.id },
   });
+
+  // Send welcome email on first activation (PENDING_PAYMENT → ACTIVE or TRIALING)
+  const wasInactive = previousStatus?.status === 'PENDING_PAYMENT';
+  const nowActive = status === 'ACTIVE' || status === 'TRIALING';
+  if (wasInactive && nowActive && previousStatus?.email) {
+    emailService.sendWelcome(previousStatus.email, previousStatus.name)
+      .catch((err) => console.error('[email] Failed to send welcome:', err));
+  }
 }
