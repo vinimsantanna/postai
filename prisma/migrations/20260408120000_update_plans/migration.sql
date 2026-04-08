@@ -1,8 +1,9 @@
--- Rename old Plan enum values to new structure
--- Since there's no production data, we drop and recreate
+-- Drop default first, then change column type, then recreate enum
 
+ALTER TABLE "User" ALTER COLUMN "plan" DROP DEFAULT;
 ALTER TABLE "User" ALTER COLUMN "plan" TYPE TEXT;
-DROP TYPE "Plan";
+DROP TYPE "Plan" CASCADE;
+
 CREATE TYPE "Plan" AS ENUM (
   'CREATOR_STARTER',
   'CREATOR_PRO',
@@ -11,7 +12,9 @@ CREATE TYPE "Plan" AS ENUM (
   'BUSINESS_ENTERPRISE',
   'AGENCY_SYMPHONY'
 );
+
 ALTER TABLE "User" ALTER COLUMN "plan" TYPE "Plan" USING 'CREATOR_STARTER'::"Plan";
+ALTER TABLE "User" ALTER COLUMN "plan" SET DEFAULT 'CREATOR_STARTER'::"Plan";
 
 -- Add TRIALING to UserStatus
-ALTER TYPE "UserStatus" ADD VALUE 'TRIALING';
+ALTER TYPE "UserStatus" ADD VALUE IF NOT EXISTS 'TRIALING';
