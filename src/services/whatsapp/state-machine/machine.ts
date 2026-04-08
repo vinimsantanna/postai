@@ -86,7 +86,7 @@ async function handleSelectClient(
   const input = message.text?.trim() ?? '';
   if (/^\d+$/.test(input)) {
     // Would look up client by index from agency client list
-    await transitionTo(session, 'waiting_copy', draft);
+    await transitionTo(session, 'waiting_copy', _draft);
     await whatsappService.sendText(message.from, MESSAGES.ASK_COPY);
   } else {
     await whatsappService.sendText(message.from, MESSAGES.SELECT_CLIENT_INVALID);
