@@ -1,26 +1,20 @@
-name: Deploy Staging
+name: Deploy Production
 
 on:
   push:
     branches: [main]
 
 concurrency:
-  group: deploy-staging
+  group: deploy-production
   cancel-in-progress: true
 
 jobs:
   deploy:
-    name: Deploy to Railway (staging)
+    name: Deploy to Railway (production)
     runs-on: ubuntu-latest
-    environment: staging
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
@@ -32,13 +26,7 @@ jobs:
 
       - name: Health check
         run: |
-          echo "Waiting for deployment to be ready..."
-          sleep 30
-          curl --fail --retry 5 --retry-delay 10 \
+          echo "Waiting for deployment..."
+          sleep 60
+          curl --fail --retry 5 --retry-delay 15 \
             "https://postai-production-a966.up.railway.app/health" || exit 1
-
-      - name: Notify on success
-        if: success()
-        run: |
-          echo "✅ Staging deploy successful: ${{ vars.STAGING_URL }}"
-
