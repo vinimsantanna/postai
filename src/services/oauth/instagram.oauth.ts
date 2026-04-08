@@ -3,14 +3,18 @@ import { apiTokenRepository } from '@/repositories/api-token.repository';
 
 const PLATFORM = 'INSTAGRAM' as const;
 
-// Instagram Basic Display API + Content Publishing API
-const AUTH_URL = 'https://api.instagram.com/oauth/authorize';
+// Instagram Business API (substitui Basic Display API em 2024)
+const AUTH_URL = 'https://www.instagram.com/oauth/authorize';
 const TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
 const LONG_LIVED_URL = 'https://graph.instagram.com/access_token';
 const REFRESH_URL = 'https://graph.instagram.com/refresh_access_token';
 const ME_URL = 'https://graph.instagram.com/me';
 
-const SCOPES = ['instagram_content_publish', 'instagram_manage_comments', 'pages_show_list'].join(',');
+const SCOPES = [
+  'instagram_business_basic',
+  'instagram_business_content_publish',
+  'instagram_business_manage_comments',
+].join(',');
 
 function getConfig() {
   const appId = process.env.INSTAGRAM_APP_ID;
