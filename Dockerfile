@@ -7,10 +7,12 @@ COPY prisma ./prisma/
 
 RUN npm ci
 
+# Generate Prisma client before compiling TypeScript
+RUN npx prisma generate
+
 COPY tsconfig.json ./
 COPY src ./src/
 
-RUN npm run db:generate
 RUN npm run build
 
 # --- Production image ---
@@ -25,8 +27,10 @@ COPY prisma ./prisma/
 
 RUN npm ci --omit=dev
 
-RUN npm run db:generate
+# Generate Prisma client in production image
+RUN npx prisma generate
 
+# Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
