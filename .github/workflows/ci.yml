@@ -54,13 +54,18 @@ jobs:
     env:
       DATABASE_URL: postgresql://postai:postai_test@localhost:5432/postai_test
       NODE_ENV: test
-      JWT_SECRET: test-secret-at-least-32-chars-long
-      JWT_REFRESH_SECRET: test-refresh-secret-at-least-32-chars
+      JWT_SECRET: test-secret-that-is-at-least-32-characters-long
+      JWT_REFRESH_SECRET: test-refresh-secret-at-least-32-characters
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef"
       EVOLUTION_API_URL: http://localhost:3001
       EVOLUTION_API_KEY: test-key
+      EVOLUTION_INSTANCE: postai-test
       N8N_WEBHOOK_PUBLISH: http://localhost:5678/webhook/postai/publish
       N8N_WEBHOOK_SCHEDULE: http://localhost:5678/webhook/postai/schedule
       N8N_WEBHOOK_RETRY: http://localhost:5678/webhook/postai/retry
+      FRONTEND_URL: http://localhost:3001
 
     steps:
       - uses: actions/checkout@v4
