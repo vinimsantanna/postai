@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import healthRoutes from '@/api/routes/health.routes';
 import authRoutes from '@/api/routes/auth.routes';
 import webhookRoutes from '@/api/routes/webhook.routes';
@@ -10,6 +11,7 @@ const app = express();
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, '../../public')));
 
 // Routes
 app.use('/health', healthRoutes);

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PostAI — Criar Conta</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo h1 {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo p {
+      color: #888;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #aaa;
+      margin-bottom: 6px;
+      margin-top: 18px;
+    }
+
+    input, select {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 15px;
+      color: #f0f0f0;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: #25D366;
+    }
+
+    select option { background: #111; }
+
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .plan-option {
+      position: relative;
+    }
+
+    .plan-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .plan-option label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 8px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin: 0;
+      text-align: center;
+    }
+
+    .plan-option input[type="radio"]:checked + label {
+      border-color: #25D366;
+      background: #0d2218;
+    }
+
+    .plan-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f0f0f0;
+    }
+
+    .plan-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: #25D366;
+      margin-top: 2px;
+    }
+
+    .plan-desc {
+      font-size: 10px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 28px;
+      padding: 14px;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error {
+      background: #2a1010;
+      border: 1px solid #5a2020;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #ff6b6b;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #555;
+      margin-top: 24px;
+    }
+
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>PostAI</h1>
+      <p>Publique em todas as redes pelo WhatsApp</p>
+    </div>
+
+    <form id="form">
+      <label for="name">Nome completo</label>
+      <input id="name" type="text" placeholder="Seu nome" required />
+
+      <label for="email">E-mail</label>
+      <input id="email" type="email" placeholder="seu@email.com" required />
+
+      <label for="cpf">CPF</label>
+      <input id="cpf" type="text" placeholder="000.000.000-00" maxlength="14" required />
+
+      <label for="password">Senha</label>
+      <input id="password" type="password" placeholder="Mínimo 8 caracteres" minlength="8" required />
+
+      <label>Plano</label>
+      <div class="plan-grid">
+        <div class="plan-option">
+          <input type="radio" name="plan" id="p1" value="CREATOR_STARTER" checked />
+          <label for="p1">
+            <span class="plan-name">Creator Starter</span>
+            <span class="plan-price">R$49</span>
+            <span class="plan-desc">30 posts/mês</span>
+          </label>
+        </div>
+        <div class="plan-option">
+          <input type="radio" name="plan" id="p2" value="CREATOR_PRO" />
+          <label for="p2">
+            <span class="plan-name">Creator Pro</span>
+            <span class="plan-price">R$79</span>
+            <span class="plan-desc">100 posts/mês</span>
+          </label>
+        </div>
+        <div class="plan-option">
+          <input type="radio" name="plan" id="p3" value="CREATOR_FULL" />
+          <label for="p3">
+            <span class="plan-name">Creator Full</span>
+            <span class="plan-price">R$109</span>
+            <span class="plan-desc">Ilimitado</span>
+          </label>
+        </div>
+        <div class="plan-option">
+          <input type="radio" name="plan" id="p4" value="BUSINESS_PLAY" />
+          <label for="p4">
+            <span class="plan-name">Business Play</span>
+            <span class="plan-price">R$109</span>
+            <span class="plan-desc">Até 3 usuários</span>
+          </label>
+        </div>
+        <div class="plan-option">
+          <input type="radio" name="plan" id="p5" value="BUSINESS_ENTERPRISE" />
+          <label for="p5">
+            <span class="plan-name">Business Enterprise</span>
+            <span class="plan-price">R$169</span>
+            <span class="plan-desc">Usuários ilimitados</span>
+          </label>
+        </div>
+        <div class="plan-option">
+          <input type="radio" name="plan" id="p6" value="AGENCY_SYMPHONY" />
+          <label for="p6">
+            <span class="plan-name">Agency Symphony</span>
+            <span class="plan-price">R$399</span>
+            <span class="plan-desc">Até 10 clientes</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="error" id="error"></div>
+
+      <button type="submit" class="btn" id="btn">
+        <span id="btn-text">Criar conta e pagar →</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+    </form>
+
+    <div class="footer">
+      Após o pagamento você receberá as instruções por e-mail.<br />
+      Dúvidas? <a href="https://wa.me/5571983030021" style="color:#25D366">Fale conosco</a>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://postai-production-a966.up.railway.app';
+
+    // CPF mask
+    document.getElementById('cpf').addEventListener('input', function () {
+      let v = this.value.replace(/\D/g, '').slice(0, 11);
+      if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3');
+      else if (v.length > 3) v = v.replace(/(\d{3})(\d{3})/, '$1.$2');
+      this.value = v;
+    });
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btn = document.getElementById('btn');
+      const btnText = document.getElementById('btn-text');
+      const spinner = document.getElementById('spinner');
+      const errorEl = document.getElementById('error');
+
+      btn.disabled = true;
+      btnText.style.display = 'none';
+      spinner.style.display = 'block';
+      errorEl.style.display = 'none';
+
+      const plan = document.querySelector('input[name="plan"]:checked').value;
+      const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
+
+      try {
+        const res = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            cpf,
+            password: document.getElementById('password').value,
+            plan,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || data.error || 'Erro ao criar conta.');
+        }
+
+        // Redirect to Stripe checkout
+        window.location.href = data.checkoutUrl;
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btnText.style.display = 'block';
+        spinner.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
