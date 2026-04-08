@@ -3,8 +3,7 @@
 // Migração futura: só trocar DATABASE_URL
 
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
