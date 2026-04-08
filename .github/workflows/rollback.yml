@@ -1,0 +1,48 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      deployment_id:
+        description: 'Railway deployment ID to rollback to (leave empty for previous)'
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Rollback deployment
+        run: |
+          if [ -n "${{ inputs.deployment_id }}" ]; then
+            railway rollback --service postai-api \
+              --environment ${{ inputs.environment }} \
+              --deployment ${{ inputs.deployment_id }}
+          else
+            railway rollback --service postai-api \
+              --environment ${{ inputs.environment }}
+          fi
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Health check after rollback
+        run: |
+          sleep 20
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            curl --fail "${{ vars.PROD_URL }}/health"
+          else
+            curl --fail "${{ vars.STAGING_URL }}/health"
+          fi

@@ -1,0 +1,59 @@
+name: Deploy Production
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  deploy:
+    name: Deploy to Railway (production)
+    runs-on: ubuntu-latest
+    environment: production  # requires manual approval in GitHub
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to production
+        run: railway up --service postai-api --environment production --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Run migrations (production)
+        run: railway run --service postai-api --environment production npm run migrate
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Health check
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 45
+          curl --fail --retry 10 --retry-delay 15 \
+            "${{ vars.PROD_URL }}/health" || exit 1
+
+      - name: Create GitHub Release
+        if: success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: PostAI ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Production deploy failed — rolling back..."
+          railway rollback --service postai-api --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
