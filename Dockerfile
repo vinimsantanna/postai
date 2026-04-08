@@ -30,8 +30,9 @@ RUN npm ci --omit=dev
 # Generate Prisma client in production image
 RUN npx prisma generate
 
-# Copy compiled output from builder
+# Copy compiled output and static files from builder
 COPY --from=builder /app/dist ./dist
+COPY public ./public/
 
 EXPOSE 3000
 
