@@ -1,6 +1,6 @@
 import type { Plan, UserStatus } from '@prisma/client';
 import { getStripe } from '@/lib/stripe';
-import { TRIAL_DAYS, PLANS } from '@/domain/plans';
+import { TRIAL_DAYS, TRIAL_PLAN, PLANS } from '@/domain/plans';
 import prisma from '@/lib/prisma';
 
 // Maps our Plan enum to Stripe Price IDs (set via env vars after running setup-stripe script)
@@ -33,7 +33,7 @@ export const billingService = {
       mode: 'subscription',
       line_items: [{ price: getPriceId(plan), quantity: 1 }],
       subscription_data: {
-        trial_period_days: TRIAL_DAYS,
+        trial_period_days: plan === TRIAL_PLAN ? TRIAL_DAYS : undefined,
         metadata: { userId, plan },
       },
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
@@ -115,7 +115,7 @@ export const billingService = {
       description: plan.description,
       features: plan.features,
       maxClients: plan.maxClients,
-      trialDays: TRIAL_DAYS,
+      trialDays: plan.id === TRIAL_PLAN ? TRIAL_DAYS : null,
     }));
   },
 };

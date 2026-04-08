@@ -1,6 +1,7 @@
 import type { Plan } from '@prisma/client';
 
 export const TRIAL_DAYS = 7;
+export const TRIAL_PLAN: Plan = 'CREATOR_PRO';
 
 export interface PlanConfig {
   id: Plan;
