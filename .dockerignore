@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.git/
+.env
+.env.*
+coverage/
+tests/
+*.log
+*.md
+.github/
+infra/
+squads/
+docs/
