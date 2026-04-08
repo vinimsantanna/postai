@@ -51,7 +51,7 @@ export async function processMessage(
 async function handleMenu(
   session: SessionWithUser,
   message: ParsedMessage,
-  draft: CampaignDraft,
+  _draft: CampaignDraft,
 ): Promise<void> {
   const input = message.text?.trim() ?? '';
 
@@ -80,7 +80,7 @@ async function handleMenu(
 async function handleSelectClient(
   session: SessionWithUser,
   message: ParsedMessage,
-  draft: CampaignDraft,
+  _draft: CampaignDraft,
 ): Promise<void> {
   // Agency client selection — simplified: expects client number
   const input = message.text?.trim() ?? '';

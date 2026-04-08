@@ -1,6 +1,5 @@
 import prisma from '@/lib/prisma';
 import { sessionRepository } from '@/repositories/session.repository';
-import { userRepository } from '@/repositories/user.repository';
 import { decrypt, normalizeCpf } from '@/lib/crypto';
 import { whatsappService } from './whatsapp.service';
 import { processMessage } from './state-machine/machine';
