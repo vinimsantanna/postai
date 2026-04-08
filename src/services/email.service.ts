@@ -1,6 +1,7 @@
 import { getResend } from '@/lib/resend';
 
-const FROM = 'PostAI <noreply@postai.app>';
+// Use onboarding@resend.dev until postai.app domain is verified in Resend
+const FROM = 'PostAI <onboarding@resend.dev>';
 const WHATSAPP_NUMBER = '+55 71 98303-0021';
 
 export const emailService = {
