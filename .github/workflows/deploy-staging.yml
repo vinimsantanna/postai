@@ -30,11 +30,6 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-      - name: Run migrations
-        run: railway run --service postai npm run migrate
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
       - name: Health check
         run: |
           echo "Waiting for deployment to be ready..."
