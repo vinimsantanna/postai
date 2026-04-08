@@ -49,6 +49,15 @@ export async function runPublish(
     return;
   }
 
+  if (results.length === 0) {
+    await campaignRepository.setResults(campaign.id, {}, 'FAILED');
+    const msg = clientId
+      ? '⚠️ Este cliente não tem plataformas conectadas. Acesse *postai.app/settings* para conectar.'
+      : '⚠️ Nenhuma plataforma conectada. Acesse *postai.app/settings* para conectar suas redes sociais.';
+    await whatsappService.sendText(phoneNumber, msg);
+    return;
+  }
+
   const resultMap: Record<string, { success: boolean; postUrl?: string; error?: string }> = {};
   for (const r of results) {
     resultMap[r.platform] = { success: r.success, postUrl: r.postUrl, error: r.error };

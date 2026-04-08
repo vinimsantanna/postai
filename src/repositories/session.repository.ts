@@ -5,7 +5,7 @@ export const sessionRepository = {
   async findActiveByPhone(phoneNumber: string) {
     return prisma.whatsappSession.findFirst({
       where: { phoneNumber, status: 'ACTIVE', deletedAt: null },
-      include: { user: true },
+      include: { user: true, activeClient: true },
     });
   },
 
@@ -40,6 +40,13 @@ export const sessionRepository = {
         campaignDraft: draft !== undefined ? (draft as object) : undefined,
         lastMessage: new Date(),
       },
+    });
+  },
+
+  async updateActiveClient(sessionId: string, clientId: string | null) {
+    return prisma.whatsappSession.update({
+      where: { id: sessionId },
+      data: { activeClientId: clientId, lastMessage: new Date() },
     });
   },
 

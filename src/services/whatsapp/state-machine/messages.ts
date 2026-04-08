@@ -26,6 +26,24 @@ export const MESSAGES = {
 
   SELECT_CLIENT_INVALID: '❌ Por favor, escolha um número válido da lista de clientes.',
 
+  SELECT_CLIENT_PROMPT: (clients: Array<{ index: number; name: string; platforms: string[] }>) => {
+    const lines = ['👥 *Selecione o cliente:*', ''];
+    for (const c of clients) {
+      const platforms = c.platforms.length > 0 ? c.platforms.join(', ') : 'sem plataformas';
+      lines.push(`${c.index}. ${c.name} — ${platforms}`);
+    }
+    lines.push('', 'Digite o *número* do cliente:');
+    return lines.join('\n');
+  },
+
+  NO_CLIENTS:
+    '⚠️ Você ainda não cadastrou clientes. Acesse *postai.app/agency* para adicionar o primeiro.',
+
+  CLIENT_SELECTED: (name: string, platforms: string[]) =>
+    platforms.length > 0
+      ? `✅ *${name}* selecionado.\n📱 Plataformas: ${platforms.join(', ')}`
+      : `✅ *${name}* selecionado.\n⚠️ Nenhuma plataforma conectada. Acesse *postai.app/settings* para conectar.`,
+
   ERROR_GENERAL:
     '⚠️ Algo deu errado. Por favor, tente novamente ou comece do menu principal digitando *menu*.',
 
@@ -47,12 +65,14 @@ export const MESSAGES = {
   CPF_INACTIVE: '⚠️ Sua conta está inativa. Verifique sua assinatura em *postai.app*.',
 };
 
-export function MENU_TEXT(name: string): string {
-  return [
+export function MENU_TEXT(name: string, isAgency = false): string {
+  const lines = [
     `Olá, *${name}*! O que você quer fazer? 👇`,
     '',
     '1️⃣ Publicar agora',
     '2️⃣ Agendar publicação',
     '3️⃣ Ver histórico',
-  ].join('\n');
+  ];
+  if (isAgency) lines.push('0️⃣ Trocar cliente');
+  return lines.join('\n');
 }

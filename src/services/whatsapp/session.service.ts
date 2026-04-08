@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { sessionRepository } from '@/repositories/session.repository';
+import { agencyClientRepository } from '@/repositories/agency-client.repository';
 import { decrypt, normalizeCpf } from '@/lib/crypto';
 import { whatsappService } from './whatsapp.service';
 import { processMessage } from './state-machine/machine';
@@ -58,8 +59,29 @@ async function handleIdentification(phone: string, message: ParsedMessage): Prom
     return;
   }
 
-  // Create session + greet
-  await sessionRepository.upsertSession(user.id, phone);
   await whatsappService.sendText(phone, MESSAGES.WELCOME(user.name));
+
+  // Agency plan → select client before showing menu
+  if (user.plan === 'AGENCY_SYMPHONY') {
+    const session = await sessionRepository.upsertSession(user.id, phone);
+    await sessionRepository.updateStep(session.id, 'select_client', null);
+
+    const clients = await agencyClientRepository.findByUser(user.id);
+    if (clients.length === 0) {
+      await whatsappService.sendText(phone, MESSAGES.NO_CLIENTS);
+      return;
+    }
+
+    const clientList = clients.map((c, i) => ({
+      index: i + 1,
+      name: c.name,
+      platforms: c.tokens.map((t) => t.platform as string),
+    }));
+    await whatsappService.sendText(phone, MESSAGES.SELECT_CLIENT_PROMPT(clientList));
+    return;
+  }
+
+  // Regular users — go straight to menu
+  await sessionRepository.upsertSession(user.id, phone);
   await whatsappService.sendText(phone, MENU_TEXT(user.name));
 }
