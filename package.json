@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
@@ -45,11 +45,19 @@
     "eslint": "^8.57.1",
     "prisma": "^5.22.0",
     "supertest": "^7.0.0",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^1.6.0"
   },
-  "keywords": ["social-media", "whatsapp", "instagram", "tiktok", "linkedin", "youtube"],
+  "keywords": [
+    "social-media",
+    "whatsapp",
+    "instagram",
+    "tiktok",
+    "linkedin",
+    "youtube"
+  ],
   "author": "Vinicius Santanna",
   "license": "UNLICENSED",
   "private": true
