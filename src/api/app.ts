@@ -4,6 +4,7 @@ import authRoutes from '@/api/routes/auth.routes';
 import webhookRoutes from '@/api/routes/webhook.routes';
 import billingRoutes from '@/api/routes/billing.routes';
 import oauthRoutes from '@/api/routes/oauth.routes';
+import agencyRoutes from '@/api/routes/agency.routes';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use('/auth', authRoutes);
 app.use('/billing', billingRoutes);
 app.use('/webhook', webhookRoutes);
 app.use('/oauth', oauthRoutes);
+app.use('/agency', agencyRoutes);
 
 // 404
 app.use((_req, res) => {
