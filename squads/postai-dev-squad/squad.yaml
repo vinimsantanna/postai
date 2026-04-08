@@ -1,0 +1,123 @@
+name: postai-dev-squad
+version: 1.0.0
+description: Squad AIOX de 10 agentes sênior para desenvolvimento do MVP PostAI — plataforma SaaS de publicação multi-canal via WhatsApp bot
+author: Vinicius Santanna
+license: MIT
+slashPrefix: postai
+
+aiox:
+  minVersion: "2.1.0"
+  type: squad
+
+components:
+  agents:
+    - atlas.md
+    - nexus.md
+    - cipher.md
+    - velocity.md
+    - sentinel.md
+    - insight.md
+    - aurora.md
+    - catalyst.md
+    - harmony.md
+    - echo.md
+  tasks:
+    - atlas-design-architecture.md
+    - atlas-review-code.md
+    - atlas-decide-tech-tradeoff.md
+    - atlas-mentor-dev.md
+    - nexus-provision-infrastructure.md
+    - nexus-setup-cicd.md
+    - nexus-configure-monitoring.md
+    - nexus-security-audit.md
+    - cipher-integrate-whatsapp.md
+    - cipher-implement-state-machine.md
+    - cipher-design-database-schema.md
+    - cipher-build-auth-system.md
+    - velocity-integrate-instagram.md
+    - velocity-integrate-tiktok.md
+    - velocity-integrate-linkedin.md
+    - velocity-integrate-youtube.md
+    - velocity-build-n8n-workflow.md
+    - velocity-orchestrate-parallel-publish.md
+    - sentinel-write-unit-tests.md
+    - sentinel-run-integration-tests.md
+    - sentinel-load-test.md
+    - sentinel-report-bugs.md
+    - insight-define-product-strategy.md
+    - insight-write-user-stories.md
+    - insight-prioritize-backlog.md
+    - insight-design-metrics.md
+    - aurora-design-conversation-flow.md
+    - aurora-create-design-system.md
+    - aurora-write-copy.md
+    - aurora-prototype-interactions.md
+    - catalyst-design-gtm-strategy.md
+    - catalyst-build-landing-page.md
+    - catalyst-create-email-funnel.md
+    - catalyst-run-growth-experiment.md
+    - harmony-setup-billing.md
+    - harmony-ensure-lgpd-compliance.md
+    - harmony-manage-vendors.md
+    - harmony-document-sops.md
+    - echo-onboard-beta-users.md
+    - echo-manage-support.md
+    - echo-collect-feedback.md
+    - echo-track-nps.md
+  workflows: []
+  checklists: []
+  templates: []
+  tools: []
+  scripts: []
+
+workflow:
+  default_order:
+    - insight
+    - atlas
+    - nexus
+    - cipher
+    - velocity
+    - aurora
+    - sentinel
+    - harmony
+    - catalyst
+    - echo
+
+  approval_gates:
+    architecture:
+      approver: atlas
+      description: "Toda feature passa por review de arquitetura antes de merge"
+    security:
+      approver: nexus
+      description: "Mudanças de infraestrutura e auth passam por security review"
+    quality:
+      approver: sentinel
+      description: "Feature só mergeia com >80% coverage e testes passando"
+    product:
+      approver: insight
+      description: "Features devem atender acceptance criteria do backlog"
+    compliance:
+      approver: harmony
+      description: "Qualquer dado de usuário passa por review de compliance LGPD"
+
+config:
+  extends: extend
+  coding-standards: config/coding-standards.md
+  tech-stack: config/tech-stack.md
+  source-tree: config/source-tree.md
+
+dependencies:
+  node: []
+  python: []
+  squads: []
+
+tags:
+  - saas
+  - whatsapp
+  - social-media
+  - publishing
+  - multi-platform
+  - nodejs
+  - typescript
+  - aws
+  - n8n
