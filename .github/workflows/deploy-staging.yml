@@ -26,12 +26,12 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to production
-        run: railway up --service postai-api --environment production --detach
+        run: railway up --service postai --environment production --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Run migrations
-        run: railway run --service postai-api --environment production npm run migrate
+        run: railway run --service postai --environment production npm run migrate
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
