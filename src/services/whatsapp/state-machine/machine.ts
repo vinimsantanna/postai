@@ -2,6 +2,8 @@ import type { WhatsappSession, User } from '@prisma/client';
 import type { ParsedMessage, ConversationState, CampaignDraft } from '@/domain/types';
 import { sessionRepository } from '@/repositories/session.repository';
 import { whatsappService } from '@/services/whatsapp/whatsapp.service';
+import { persistMedia } from '@/services/whatsapp/media-handler';
+import { runPublish } from '@/services/publishing/publisher.service';
 import { MESSAGES, MENU_TEXT } from './messages';
 
 type SessionWithUser = WhatsappSession & { user: User };
@@ -116,7 +118,14 @@ async function handleWaitingVideo(
     await whatsappService.sendText(message.from, MESSAGES.VIDEO_REQUIRED);
     return;
   }
-  const newDraft = { ...draft, videoUrl: message.mediaUrl };
+  await whatsappService.sendText(message.from, '⏳ Processando vídeo...');
+  const permanentUrl = await persistMedia(
+    message.mediaUrl,
+    session.userId,
+    'video',
+    message.messageId,
+  );
+  const newDraft = { ...draft, videoUrl: permanentUrl };
   await transitionTo(session, 'waiting_thumbnail', newDraft);
   await whatsappService.sendText(message.from, MESSAGES.ASK_THUMBNAIL);
 }
@@ -129,7 +138,13 @@ async function handleWaitingThumbnail(
   let newDraft = { ...draft };
 
   if (message.type === 'image' && message.mediaUrl) {
-    newDraft = { ...draft, thumbnailUrl: message.mediaUrl };
+    const permanentUrl = await persistMedia(
+      message.mediaUrl,
+      session.userId,
+      'image',
+      message.messageId,
+    );
+    newDraft = { ...draft, thumbnailUrl: permanentUrl };
   }
   // "pular" or any text = skip thumbnail
   await transitionTo(session, 'confirm_publish', newDraft);
@@ -160,8 +175,10 @@ async function handleConfirmPublish(
   if (input === 'confirmar' || input === 'ok' || input === 'sim' || input === '1') {
     await transitionTo(session, 'menu', null);
     await whatsappService.sendText(message.from, MESSAGES.PUBLISHING_STARTED);
-    // n8n webhook call happens via campaign service (not here)
-    // The controller layer handles campaign creation + n8n dispatch
+    // Fire-and-forget: publish runs in background, sends result when done
+    runPublish(session.userId, message.from, draft, session.activeClientId ?? undefined).catch(
+      (err) => console.error('[publisher] Unhandled error:', err),
+    );
   } else if (input === 'cancelar' || input === 'não' || input === 'nao' || input === '2') {
     await transitionTo(session, 'menu', null);
     await whatsappService.sendText(message.from, MESSAGES.PUBLISH_CANCELLED);

@@ -15,6 +15,18 @@ vi.mock('@/services/whatsapp/whatsapp.service', () => ({
   },
 }));
 
+// Mock media persistence — returns the same URL (no Supabase in unit tests)
+vi.mock('@/services/whatsapp/media-handler', () => ({
+  persistMedia: vi.fn().mockImplementation((_url: string, _userId: string, _type: string, _id: string) =>
+    Promise.resolve(_url),
+  ),
+}));
+
+// Mock publisher — fire-and-forget (no real API calls in unit tests)
+vi.mock('@/services/publishing/publisher.service', () => ({
+  runPublish: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Import after mocks
 const { processMessage } = await import('@/services/whatsapp/state-machine/machine');
 const { sessionRepository } = await import('@/repositories/session.repository');
