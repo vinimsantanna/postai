@@ -2,6 +2,7 @@ import express from 'express';
 import healthRoutes from '@/api/routes/health.routes';
 import authRoutes from '@/api/routes/auth.routes';
 import webhookRoutes from '@/api/routes/webhook.routes';
+import billingRoutes from '@/api/routes/billing.routes';
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(express.urlencoded({ extended: false }));
 // Routes
 app.use('/health', healthRoutes);
 app.use('/auth', authRoutes);
+app.use('/billing', billingRoutes);
 app.use('/webhook', webhookRoutes);
 
 // 404

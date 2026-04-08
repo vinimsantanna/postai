@@ -16,15 +16,20 @@ datasource db {
 // ============================================================
 
 enum Plan {
-  FREE
-  CREATOR   // R$49/mês
-  BUSINESS  // R$149/mês
-  AGENCY    // R$399/mês — até 10 clientes
-  AGENCY_PRO
+  // Creator
+  CREATOR_STARTER    // R$49/mês
+  CREATOR_PRO        // R$79/mês
+  CREATOR_FULL       // R$109/mês
+  // Business
+  BUSINESS_PLAY      // R$109/mês
+  BUSINESS_ENTERPRISE // R$169/mês
+  // Agency
+  AGENCY_SYMPHONY    // R$399/mês — até 10 clientes
 }
 
 enum UserStatus {
-  PENDING_PAYMENT
+  TRIALING        // trial 7 dias
+  PENDING_PAYMENT // aguardando pagamento após trial
   ACTIVE
   PAST_DUE
   CANCELLED
@@ -64,7 +69,7 @@ model User {
   cpfMasked            String              // "739.885.483-09" (display)
   name                 String
   passwordHash         String
-  plan                 Plan       @default(FREE)
+  plan                 Plan       @default(CREATOR_STARTER)
   status               UserStatus @default(PENDING_PAYMENT)
   stripeCustomerId     String?    @unique
   stripeSubscriptionId String?    @unique
