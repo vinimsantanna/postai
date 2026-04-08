@@ -4,6 +4,7 @@ import { sessionRepository } from '@/repositories/session.repository';
 import { whatsappService } from '@/services/whatsapp/whatsapp.service';
 import { persistMedia } from '@/services/whatsapp/media-handler';
 import { runPublish } from '@/services/publishing/publisher.service';
+import { retryFailedPlatforms } from '@/services/notifications/whatsapp-notifier';
 import { MESSAGES, MENU_TEXT } from './messages';
 
 type SessionWithUser = WhatsappSession & { user: User };
@@ -53,9 +54,25 @@ export async function processMessage(
 async function handleMenu(
   session: SessionWithUser,
   message: ParsedMessage,
-  _draft: CampaignDraft,
+  draft: CampaignDraft,
 ): Promise<void> {
   const input = message.text?.trim() ?? '';
+
+  // "retentar" command — re-publish only failed platforms from last campaign
+  if (input === 'retentar' || input === 'retry') {
+    const lastCampaignId = draft.lastCampaignId;
+    if (!lastCampaignId) {
+      await whatsappService.sendText(message.from, '❌ Nenhuma publicação recente encontrada para retentar.');
+      return;
+    }
+    await retryFailedPlatforms(
+      lastCampaignId,
+      session.userId,
+      message.from,
+      session.activeClientId ?? undefined,
+    ).catch((err) => console.error('[retentar] error:', err));
+    return;
+  }
 
   switch (input) {
     case '1':

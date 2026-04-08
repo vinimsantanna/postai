@@ -58,6 +58,7 @@ export interface CampaignDraft {
   thumbnailUrl?: string;
   platforms?: string[];
   scheduledAt?: string;
+  lastCampaignId?: string; // set after publish so user can "retentar"
 }
 
 // ============================================================

@@ -1,22 +1,10 @@
 import type { Platform } from '@prisma/client';
 import { publishToAllPlatforms, type PlatformResult } from './parallel-publisher';
 import { campaignRepository } from '@/repositories/campaign.repository';
+import { notifyPublishResult } from '@/services/notifications/whatsapp-notifier';
 import { whatsappService } from '@/services/whatsapp/whatsapp.service';
+import { sessionRepository } from '@/repositories/session.repository';
 import type { CampaignDraft } from '@/domain/types';
-
-const PLATFORM_EMOJI: Record<Platform, string> = {
-  INSTAGRAM: '📸',
-  TIKTOK: '🎵',
-  LINKEDIN: '💼',
-  YOUTUBE: '▶️',
-};
-
-const PLATFORM_NAME: Record<Platform, string> = {
-  INSTAGRAM: 'Instagram',
-  TIKTOK: 'TikTok',
-  LINKEDIN: 'LinkedIn',
-  YOUTUBE: 'YouTube',
-};
 
 /**
  * Creates campaign, publishes in parallel, saves results, notifies user.
@@ -28,10 +16,8 @@ export async function runPublish(
   draft: CampaignDraft,
   clientId?: string,
 ): Promise<void> {
-  // Determine connected platforms (from draft or all connected)
   const platforms = (draft.platforms ?? ['INSTAGRAM', 'TIKTOK', 'LINKEDIN', 'YOUTUBE']) as Platform[];
 
-  // Create campaign record
   const campaign = await campaignRepository.create({
     userId,
     clientId,
@@ -55,7 +41,6 @@ export async function runPublish(
       clientId,
     );
   } catch (err) {
-    // Catastrophic failure (no platforms connected, etc.)
     await campaignRepository.setResults(campaign.id, {}, 'FAILED');
     await whatsappService.sendText(
       phoneNumber,
@@ -64,7 +49,6 @@ export async function runPublish(
     return;
   }
 
-  // Save results and determine overall status
   const resultMap: Record<string, { success: boolean; postUrl?: string; error?: string }> = {};
   for (const r of results) {
     resultMap[r.platform] = { success: r.success, postUrl: r.postUrl, error: r.error };
@@ -80,24 +64,15 @@ export async function runPublish(
 
   await campaignRepository.setResults(campaign.id, resultMap, status);
 
-  // Build notification message
-  const lines = ['✅ *Publicação concluída!*', ''];
-  for (const r of results) {
-    const emoji = PLATFORM_EMOJI[r.platform];
-    const name = PLATFORM_NAME[r.platform];
-    if (r.success && r.postUrl) {
-      lines.push(`${emoji} *${name}:* ✅ ${r.postUrl}`);
-    } else if (r.success) {
-      lines.push(`${emoji} *${name}:* ✅ Publicado`);
-    } else {
-      lines.push(`${emoji} *${name}:* ⚠️ Falhou — ${r.error ?? 'erro desconhecido'}`);
-    }
+  // Save campaignId to session draft so user can type "retentar"
+  const session = await sessionRepository.findActiveByPhone(phoneNumber);
+  if (session) {
+    const currentDraft = (session.campaignDraft ?? {}) as CampaignDraft;
+    await sessionRepository.updateStep(session.id, 'menu', {
+      ...currentDraft,
+      lastCampaignId: campaign.id,
+    });
   }
 
-  if (status === 'PARTIAL_FAILURE') {
-    lines.push('');
-    lines.push('💡 Para reconectar plataformas com falha: postai.app/settings/social');
-  }
-
-  await whatsappService.sendText(phoneNumber, lines.join('\n'));
+  await notifyPublishResult({ phoneNumber, results });
 }
