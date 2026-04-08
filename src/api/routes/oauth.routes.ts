@@ -4,22 +4,14 @@ import { oauthController } from '@/api/controllers/oauth.controller';
 
 const router = Router();
 
-// All OAuth routes require authentication (JWT)
-router.use(requireAuth);
-
-// GET  /oauth/connections          — list all platform connection statuses
-router.get('/connections', oauthController.listConnections);
-
-// GET  /oauth/:platform/connect    — get authorization URL
-router.get('/:platform/connect', oauthController.connect);
-
-// GET  /oauth/:platform/callback   — OAuth callback (code exchange)
+// Public — Meta/Google/TikTok/LinkedIn redirect here (sem JWT)
 router.get('/:platform/callback', oauthController.callback);
 
-// DELETE /oauth/:platform/disconnect — revoke & remove token
+// Autenticadas — requerem JWT
+router.use(requireAuth);
+router.get('/connections', oauthController.listConnections);
+router.get('/:platform/connect', oauthController.connect);
 router.delete('/:platform/disconnect', oauthController.disconnect);
-
-// POST /oauth/:platform/refresh    — manually refresh access token
 router.post('/:platform/refresh', oauthController.refresh);
 
 export default router;
