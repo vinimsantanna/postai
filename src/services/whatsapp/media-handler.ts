@@ -48,8 +48,15 @@ async function decryptWhatsAppMedia(
   const ciphertext = encData.subarray(0, -10);
 
   // Decrypt AES-256-CBC
+  // setAutoPadding(false) to inspect raw output even if padding is wrong
   const decipher = crypto.createDecipheriv('aes-256-cbc', cipherKey, iv);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  decipher.setAutoPadding(false);
+  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  console.log('[media-handler] decrypt first4:', decrypted.slice(0, 4).toString('hex'), '(JPEG=ffd8ffe0, PNG=89504e47)');
+  // Re-enable padding check: strip manually after confirming header
+  const padLen = decrypted[decrypted.length - 1];
+  if (padLen > 16 || padLen === 0) throw new Error(`[media-handler] Invalid PKCS7 pad byte: ${padLen}`);
+  return decrypted.subarray(0, decrypted.length - padLen);
 }
 
 /**
