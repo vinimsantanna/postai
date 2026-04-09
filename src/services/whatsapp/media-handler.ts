@@ -26,14 +26,25 @@ async function decryptWhatsAppMedia(
 
   console.log('[media-handler] mediaKey[:8]:', mediaKey.slice(0, 8).toString('hex'), '| len:', mediaKey.length, '| info:', infoStr);
 
-  // Use Node.js built-in HKDF (crypto.hkdfSync, Node 15+)
+  // Try both the declared type and the alternative (image ↔ document)
+  // Some WhatsApp clients encrypt images-as-documents using image keys
+  const altInfoStr = infoStr === 'WhatsApp Document Keys'
+    ? 'WhatsApp Image Keys'
+    : 'WhatsApp Document Keys';
+  for (const currentInfo of [infoStr, altInfoStr]) {
+    const expanded = Buffer.from(
+      crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(currentInfo), 112),
+    );
+    console.log('[media-handler] trying info:', currentInfo, '| iv:', expanded.slice(0, 16).toString('hex'));
+  }
+
   const expanded = Buffer.from(
     crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(infoStr), 112),
   );
   const iv = expanded.subarray(0, 16);
   const cipherKey = expanded.subarray(16, 48);
 
-  console.log('[media-handler] iv:', iv.toString('hex'), '| cipherKey[:8]:', cipherKey.slice(0, 8).toString('hex'));
+  console.log('[media-handler] using info:', infoStr, '| iv:', iv.toString('hex'), '| cipherKey[:8]:', cipherKey.slice(0, 8).toString('hex'));
 
   // Download encrypted CDN file
   const response = await axios.get<ArrayBuffer>(encryptedUrl, {
@@ -47,16 +58,21 @@ async function decryptWhatsAppMedia(
   // Strip 10-byte HMAC suffix
   const ciphertext = encData.subarray(0, -10);
 
-  // Decrypt AES-256-CBC
-  // setAutoPadding(false) to inspect raw output even if padding is wrong
+  // Try both info strings — some WhatsApp clients use image keys for image documents
+  for (const tryInfo of [infoStr, altInfoStr]) {
+    const tryExpanded = Buffer.from(crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(tryInfo), 112));
+    const tryIv = tryExpanded.subarray(0, 16);
+    const tryKey = tryExpanded.subarray(16, 48);
+    const tryDecipher = crypto.createDecipheriv('aes-256-cbc', tryKey, tryIv);
+    tryDecipher.setAutoPadding(false);
+    const tryResult = Buffer.concat([tryDecipher.update(ciphertext), tryDecipher.final()]);
+    const padByte = tryResult[tryResult.length - 1];
+    console.log('[media-handler] info:', tryInfo, '| first4:', tryResult.slice(0, 4).toString('hex'), '| padByte:', padByte);
+  }
+
+  // Decrypt AES-256-CBC with declared type
   const decipher = crypto.createDecipheriv('aes-256-cbc', cipherKey, iv);
-  decipher.setAutoPadding(false);
-  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-  console.log('[media-handler] decrypt first4:', decrypted.slice(0, 4).toString('hex'), '(JPEG=ffd8ffe0, PNG=89504e47)');
-  // Re-enable padding check: strip manually after confirming header
-  const padLen = decrypted[decrypted.length - 1];
-  if (padLen > 16 || padLen === 0) throw new Error(`[media-handler] Invalid PKCS7 pad byte: ${padLen}`);
-  return decrypted.subarray(0, decrypted.length - padLen);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 }
 
 /**
