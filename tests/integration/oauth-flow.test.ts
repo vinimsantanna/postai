@@ -10,6 +10,7 @@ const TEST_USER = {
   password: 'password123',
   name: 'OAuth Test User',
   cpf: '98765432100',
+  plan: 'CREATOR_STARTER',
 };
 
 let accessToken: string;

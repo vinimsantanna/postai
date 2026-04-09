@@ -10,6 +10,7 @@ const TEST_USER = {
   password: 'password123',
   name: 'Test User',
   cpf: '12345678901',
+  plan: 'CREATOR_STARTER',
 };
 
 beforeAll(async () => {
