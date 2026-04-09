@@ -215,7 +215,6 @@ async function handleMenu(
         await whatsappService.sendText(message.from, lines.join('\n'));
       }
 
-      await whatsappService.sendText(message.from, MENU_TEXT(session.user.name, session.user.plan === 'AGENCY_SYMPHONY'));
       break;
     }
     default:
