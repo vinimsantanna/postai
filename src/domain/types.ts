@@ -30,10 +30,10 @@ export interface EvolutionWebhookEvent {
     };
     message?: {
       conversation?: string;
-      imageMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string; mediaKey?: string };
-      videoMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string; mediaKey?: string };
-      audioMessage?: { url?: string; mimetype?: string; base64?: string; mediaKey?: string };
-      documentMessage?: { url?: string; mimetype?: string; title?: string; base64?: string; mediaKey?: string };
+      imageMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string; mediaKey?: unknown };
+      videoMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string; mediaKey?: unknown };
+      audioMessage?: { url?: string; mimetype?: string; base64?: string; mediaKey?: unknown };
+      documentMessage?: { url?: string; mimetype?: string; title?: string; base64?: string; mediaKey?: unknown };
       buttonsResponseMessage?: { selectedButtonId?: string; selectedDisplayText?: string };
     };
     // Present when webhookBase64=true — base64-encoded media at data level

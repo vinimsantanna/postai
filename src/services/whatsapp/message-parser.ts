@@ -4,6 +4,22 @@ export function parsePhoneNumber(jid: string): string {
   return jid.split('@')[0];
 }
 
+/**
+ * Evolution API can send mediaKey as a base64 string OR as a serialized Buffer
+ * object {type:'Buffer', data:[...]}. Normalize to base64 string.
+ */
+function normalizeMediaKey(key: unknown): string | undefined {
+  if (!key) return undefined;
+  if (typeof key === 'string') return key;
+  if (typeof key === 'object' && key !== null) {
+    const obj = key as Record<string, unknown>;
+    if (obj['type'] === 'Buffer' && Array.isArray(obj['data'])) {
+      return Buffer.from(obj['data'] as number[]).toString('base64');
+    }
+  }
+  return undefined;
+}
+
 export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null {
   const { data } = event;
 
@@ -47,7 +63,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       text: msg.imageMessage.caption?.trim(),
       mediaUrl, mimeType: msg.imageMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.imageMessage.mediaKey,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.imageMessage.mediaKey),
       whatsappMediaType: 'image',
     };
   }
@@ -59,7 +75,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       text: msg.videoMessage.caption?.trim(),
       mediaUrl, mimeType: msg.videoMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.videoMessage.mediaKey,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.videoMessage.mediaKey),
       whatsappMediaType: 'video',
     };
   }
@@ -70,7 +86,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       type: 'audio', from,
       mediaUrl, mimeType: msg.audioMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.audioMessage.mediaKey,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.audioMessage.mediaKey),
       whatsappMediaType: 'audio',
     };
   }
@@ -82,7 +98,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       text: msg.documentMessage.title,
       mediaUrl, mimeType: msg.documentMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.documentMessage.mediaKey,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.documentMessage.mediaKey),
       whatsappMediaType: 'document',
     };
   }
