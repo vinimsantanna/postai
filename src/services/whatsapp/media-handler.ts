@@ -20,10 +20,13 @@ export async function persistMedia(
 
   let buffer: Buffer;
 
+  console.log('[media-handler] mediaUrl type:', mediaUrl?.startsWith('data:') ? `data: (${mediaUrl.length} chars)` : mediaUrl?.substring(0, 80));
+
   if (mediaUrl.startsWith('data:')) {
     const base64Data = mediaUrl.split(',')[1];
     if (!base64Data) throw new Error('[media-handler] Empty base64 data');
     buffer = Buffer.from(base64Data, 'base64');
+    console.log('[media-handler] buffer size from base64:', buffer.length, 'bytes');
   } else {
     // Direct CDN download (works when URL is not encrypted)
     const response = await axios.get<Buffer>(mediaUrl, {
