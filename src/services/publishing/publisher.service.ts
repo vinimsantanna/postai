@@ -38,6 +38,7 @@ export async function runPublish(
         videoUrl: draft.videoUrl,
         photoUrl: draft.photoUrl,
         coverPhotoUrl: draft.coverPhotoUrl,
+        collaborators: draft.collaborators,
       },
       clientId,
     );

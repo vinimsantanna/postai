@@ -10,6 +10,7 @@ export interface PublishInput {
   videoUrl?: string;
   photoUrl?: string;
   coverPhotoUrl?: string;
+  collaborators?: string[];
 }
 
 export interface PlatformResult {
@@ -52,11 +53,11 @@ async function callPlatform(
   accessToken: string,
   input: PublishInput,
 ): Promise<string> {
-  const { copy, videoUrl, photoUrl, coverPhotoUrl } = input;
+  const { copy, videoUrl, photoUrl, coverPhotoUrl, collaborators } = input;
 
   switch (platform) {
     case 'INSTAGRAM': {
-      const r = await publishToInstagram(accessToken, copy, videoUrl, photoUrl, coverPhotoUrl);
+      const r = await publishToInstagram(accessToken, copy, videoUrl, photoUrl, coverPhotoUrl, collaborators);
       return r.postUrl;
     }
     case 'TIKTOK': {

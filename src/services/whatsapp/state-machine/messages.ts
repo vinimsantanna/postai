@@ -25,6 +25,9 @@ export const MESSAGES = {
 
   MEDIA_TYPE_INVALID: '❌ Opção inválida. Digite *1* para vídeo ou *2* para foto:',
 
+  ASK_COLLAB:
+    '🤝 Quer marcar um *colaborador* (collab)? O post aparecerá no perfil dele também.\n\nMande o *@username* do colaborador ou escreva *"não"* para pular:',
+
   VIDEO_LARGE_WARNING:
     '⏳ Vídeo recebido! Estamos processando e publicando...\n\n_Vídeos maiores podem levar alguns minutos. Você receberá uma confirmação quando estiver no ar!_',
 

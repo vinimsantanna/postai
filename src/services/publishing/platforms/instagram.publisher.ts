@@ -18,6 +18,7 @@ export async function publishToInstagram(
   videoUrl?: string,
   photoUrl?: string,
   coverPhotoUrl?: string,
+  collaborators?: string[],
 ): Promise<InstagramPublishResult> {
   // Step 1: Get IG user ID
   const meRes = await fetch(`${BASE}/me?fields=id,username&access_token=${accessToken}`);
@@ -25,7 +26,7 @@ export async function publishToInstagram(
   const me = (await meRes.json()) as { id: string; username: string };
 
   if (videoUrl) {
-    return publishReel(me.id, accessToken, copy, videoUrl, coverPhotoUrl);
+    return publishReel(me.id, accessToken, copy, videoUrl, coverPhotoUrl, collaborators);
   } else if (photoUrl) {
     return publishPhoto(me.id, accessToken, copy, photoUrl);
   } else {
@@ -39,14 +40,16 @@ async function publishReel(
   copy: string,
   videoUrl: string,
   coverPhotoUrl?: string,
+  collaborators?: string[],
 ): Promise<InstagramPublishResult> {
-  const containerBody: Record<string, string> = {
+  const containerBody: Record<string, unknown> = {
     media_type: 'REELS',
     video_url: videoUrl,
     caption: copy,
     access_token: accessToken,
   };
   if (coverPhotoUrl) containerBody.cover_url = coverPhotoUrl;
+  if (collaborators?.length) containerBody.collaborators = collaborators;
 
   const containerRes = await fetch(`${BASE}/${igUserId}/media`, {
     method: 'POST',
