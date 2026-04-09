@@ -31,14 +31,14 @@ export const instagramOAuth = {
   getAuthUrl(userId: string, clientId?: string): string {
     const { appId, redirectUri } = getConfig();
     const state = encodeState({ userId, clientId });
+    // scope must use literal commas — URLSearchParams encodes them as %2C which Instagram rejects
     const params = new URLSearchParams({
       client_id: appId,
       redirect_uri: redirectUri,
-      scope: SCOPES,
       response_type: 'code',
       state,
     });
-    return `${AUTH_URL}?${params}`;
+    return `${AUTH_URL}?${params}&scope=${SCOPES}`;
   },
 
   async handleCallback(code: string, state: string) {
