@@ -63,7 +63,7 @@ export async function retryFailedPlatforms(
   const draft: CampaignDraft = {
     copy: campaign.originalCopy,
     videoUrl: campaign.videoUrl ?? undefined,
-    thumbnailUrl: campaign.thumbnailUrl ?? undefined,
+    coverPhotoUrl: campaign.thumbnailUrl ?? undefined,
     platforms: failedPlatforms,
   };
 
@@ -73,8 +73,8 @@ export async function retryFailedPlatforms(
     userId,
     {
       copy: draft.copy ?? '',
-      videoUrl: draft.videoUrl ?? '',
-      thumbnailUrl: draft.thumbnailUrl,
+      videoUrl: draft.videoUrl,
+      coverPhotoUrl: draft.coverPhotoUrl,
     },
     clientId,
   ).then((results) => results.filter((r) => failedPlatforms.includes(r.platform)));

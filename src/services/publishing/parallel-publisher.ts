@@ -7,8 +7,9 @@ import { publishToYouTube } from './platforms/youtube.publisher';
 
 export interface PublishInput {
   copy: string;
-  videoUrl: string;
-  thumbnailUrl?: string;
+  videoUrl?: string;
+  photoUrl?: string;
+  coverPhotoUrl?: string;
 }
 
 export interface PlatformResult {
@@ -51,23 +52,23 @@ async function callPlatform(
   accessToken: string,
   input: PublishInput,
 ): Promise<string> {
-  const { copy, videoUrl, thumbnailUrl } = input;
+  const { copy, videoUrl, photoUrl, coverPhotoUrl } = input;
 
   switch (platform) {
     case 'INSTAGRAM': {
-      const r = await publishToInstagram(accessToken, copy, videoUrl, thumbnailUrl);
+      const r = await publishToInstagram(accessToken, copy, videoUrl, photoUrl, coverPhotoUrl);
       return r.postUrl;
     }
     case 'TIKTOK': {
-      const r = await publishToTikTok(accessToken, copy, videoUrl, thumbnailUrl);
+      const r = await publishToTikTok(accessToken, copy, videoUrl ?? '', coverPhotoUrl);
       return r.postUrl;
     }
     case 'LINKEDIN': {
-      const r = await publishToLinkedIn(accessToken, copy, videoUrl, thumbnailUrl);
+      const r = await publishToLinkedIn(accessToken, copy, videoUrl ?? '', coverPhotoUrl);
       return r.postUrl;
     }
     case 'YOUTUBE': {
-      const r = await publishToYouTube(accessToken, copy, videoUrl, thumbnailUrl);
+      const r = await publishToYouTube(accessToken, copy, videoUrl ?? '', coverPhotoUrl);
       return r.postUrl;
     }
     default:

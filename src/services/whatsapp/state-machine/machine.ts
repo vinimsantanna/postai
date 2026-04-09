@@ -50,11 +50,17 @@ export async function processMessage(
     case 'waiting_copy':
       await handleWaitingCopy(session, message, draft);
       break;
+    case 'waiting_media_type':
+      await handleWaitingMediaType(session, message, draft);
+      break;
     case 'waiting_video':
       await handleWaitingVideo(session, message, draft);
       break;
-    case 'waiting_thumbnail':
-      await handleWaitingThumbnail(session, message, draft);
+    case 'waiting_photo':
+      await handleWaitingPhoto(session, message, draft);
+      break;
+    case 'waiting_cover_photo':
+      await handleWaitingCoverPhoto(session, message, draft);
       break;
     case 'waiting_schedule':
       await handleWaitingSchedule(session, message, draft);
@@ -280,8 +286,27 @@ async function handleWaitingCopy(
     return;
   }
   const newDraft = { ...draft, copy: message.text };
-  await transitionTo(session, 'waiting_video', newDraft);
-  await whatsappService.sendText(message.from, MESSAGES.ASK_VIDEO);
+  await transitionTo(session, 'waiting_media_type', newDraft);
+  await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
+}
+
+async function handleWaitingMediaType(
+  session: SessionWithUser,
+  message: ParsedMessage,
+  draft: CampaignDraft,
+): Promise<void> {
+  const input = message.text?.trim() ?? '';
+  if (input === '1') {
+    const newDraft = { ...draft, mediaType: 'video' as const };
+    await transitionTo(session, 'waiting_video', newDraft);
+    await whatsappService.sendText(message.from, MESSAGES.ASK_VIDEO);
+  } else if (input === '2') {
+    const newDraft = { ...draft, mediaType: 'photo' as const };
+    await transitionTo(session, 'waiting_photo', newDraft);
+    await whatsappService.sendText(message.from, MESSAGES.ASK_PHOTO);
+  } else {
+    await whatsappService.sendText(message.from, MESSAGES.MEDIA_TYPE_INVALID);
+  }
 }
 
 async function handleWaitingVideo(
@@ -294,7 +319,7 @@ async function handleWaitingVideo(
     await whatsappService.sendText(message.from, MESSAGES.VIDEO_REQUIRED);
     return;
   }
-  await whatsappService.sendText(message.from, '⏳ Processando vídeo...');
+  await whatsappService.sendText(message.from, MESSAGES.VIDEO_LARGE_WARNING);
   const permanentUrl = await persistMedia(
     message.mediaUrl,
     session.userId,
@@ -304,11 +329,40 @@ async function handleWaitingVideo(
     message.rawMessage,
   );
   const newDraft = { ...draft, videoUrl: permanentUrl };
-  await transitionTo(session, 'waiting_thumbnail', newDraft);
-  await whatsappService.sendText(message.from, MESSAGES.ASK_THUMBNAIL);
+  await transitionTo(session, 'waiting_cover_photo', newDraft);
+  await whatsappService.sendText(message.from, MESSAGES.ASK_COVER_PHOTO);
 }
 
-async function handleWaitingThumbnail(
+async function handleWaitingPhoto(
+  session: SessionWithUser,
+  message: ParsedMessage,
+  draft: CampaignDraft,
+): Promise<void> {
+  const isImageDocument = message.type === 'document' && message.mimeType?.startsWith('image/');
+  if ((message.type !== 'image' && !isImageDocument) || !message.mediaUrl) {
+    await whatsappService.sendText(message.from, MESSAGES.PHOTO_REQUIRED);
+    return;
+  }
+  const permanentUrl = await persistMedia(
+    message.mediaUrl,
+    session.userId,
+    'image',
+    message.messageId,
+    message.messageKey,
+    message.rawMessage,
+  );
+  const newDraft = { ...draft, photoUrl: permanentUrl };
+
+  if (newDraft.isScheduled) {
+    await transitionTo(session, 'waiting_schedule_date', newDraft);
+    await whatsappService.sendText(message.from, MESSAGES.ASK_SCHEDULE_DATE);
+  } else {
+    await transitionTo(session, 'confirm_publish', newDraft);
+    await whatsappService.sendText(message.from, confirmMessage(newDraft, session.activeClient?.name));
+  }
+}
+
+async function handleWaitingCoverPhoto(
   session: SessionWithUser,
   message: ParsedMessage,
   draft: CampaignDraft,
@@ -325,12 +379,11 @@ async function handleWaitingThumbnail(
       message.messageKey,
       message.rawMessage,
     );
-    newDraft = { ...draft, thumbnailUrl: permanentUrl };
+    newDraft = { ...draft, coverPhotoUrl: permanentUrl };
   }
-  // "pular" or any text = skip thumbnail
+  // any text (including "pular") = skip cover photo
 
   if (newDraft.isScheduled) {
-    // Scheduled flow: ask for date next
     await transitionTo(session, 'waiting_schedule_date', newDraft);
     await whatsappService.sendText(message.from, MESSAGES.ASK_SCHEDULE_DATE);
   } else {
@@ -413,8 +466,8 @@ async function handleConfirmSchedule(
       userId: session.userId,
       clientId: session.activeClientId ?? undefined,
       copy: draft.copy ?? '',
-      videoUrl: draft.videoUrl,
-      thumbnailUrl: draft.thumbnailUrl,
+      videoUrl: draft.videoUrl ?? draft.photoUrl,
+      thumbnailUrl: draft.coverPhotoUrl,
       platforms,
       scheduledAt,
     });
@@ -506,13 +559,21 @@ async function transitionTo(
 
 function confirmMessage(draft: CampaignDraft, clientName?: string): string {
   const platforms = draft.platforms?.join(', ') || 'Instagram, TikTok, LinkedIn, YouTube';
+  const isVideo = draft.mediaType === 'video' || draft.videoUrl;
+  const mediaLine = isVideo
+    ? `🎬 *Vídeo:* ${draft.videoUrl ? '✅ Enviado' : '—'}`
+    : `📸 *Foto:* ${draft.photoUrl ? '✅ Enviada' : '—'}`;
+  const coverLine = isVideo
+    ? `🖼️ *Foto de capa:* ${draft.coverPhotoUrl ? '✅ Enviada' : 'Não enviada'}`
+    : '';
+
   return [
     '📋 *Confirme sua publicação:*',
     '',
     clientName ? `👤 *Cliente:* ${clientName}` : '',
     `📝 *Legenda:* ${draft.copy ?? '—'}`,
-    `🎬 *Vídeo:* ${draft.videoUrl ? '✅ Enviado' : '—'}`,
-    `🖼️ *Thumbnail:* ${draft.thumbnailUrl ? '✅ Enviada' : 'Não enviada'}`,
+    mediaLine,
+    coverLine,
     `📱 *Plataformas:* ${platforms}`,
     draft.scheduledAt ? `⏰ *Agendado para:* ${draft.scheduledAt}` : '',
     '',

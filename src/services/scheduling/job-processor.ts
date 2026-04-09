@@ -40,8 +40,8 @@ async function processScheduledPost(job: Job<ScheduledJobData>): Promise<void> {
     userId,
     {
       copy: campaign.originalCopy,
-      videoUrl: campaign.videoUrl ?? '',
-      thumbnailUrl: campaign.thumbnailUrl ?? undefined,
+      videoUrl: campaign.videoUrl ?? undefined,
+      coverPhotoUrl: campaign.thumbnailUrl ?? undefined,
     },
     clientId,
   );

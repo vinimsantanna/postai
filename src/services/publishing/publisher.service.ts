@@ -22,8 +22,8 @@ export async function runPublish(
     userId,
     clientId,
     copy: draft.copy ?? '',
-    videoUrl: draft.videoUrl,
-    thumbnailUrl: draft.thumbnailUrl,
+    videoUrl: draft.videoUrl ?? draft.photoUrl,
+    thumbnailUrl: draft.coverPhotoUrl,
     platforms,
   });
 
@@ -35,8 +35,9 @@ export async function runPublish(
       userId,
       {
         copy: draft.copy ?? '',
-        videoUrl: draft.videoUrl ?? '',
-        thumbnailUrl: draft.thumbnailUrl,
+        videoUrl: draft.videoUrl,
+        photoUrl: draft.photoUrl,
+        coverPhotoUrl: draft.coverPhotoUrl,
       },
       clientId,
     );

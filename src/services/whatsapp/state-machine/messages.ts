@@ -6,14 +6,27 @@ export const MESSAGES = {
 
   ASK_SCHEDULED_COPY: '⏰ Vamos agendar! Me manda a *legenda* do post:',
 
-  ASK_VIDEO: '🎬 Agora me manda o *vídeo* que você quer publicar:',
+  ASK_MEDIA_TYPE:
+    '📸 O que você quer publicar?\n\n1️⃣ Vídeo\n2️⃣ Foto\n\nDigite *1* ou *2*:',
 
-  ASK_THUMBNAIL:
-    '🖼️ Quer enviar uma *thumbnail*? (Opcional — mande a imagem ou escreva "pular"):',
+  ASK_VIDEO:
+    '🎬 Me manda o *vídeo* que você quer publicar:\n\n_(Para melhor qualidade, envie como *documento*)_',
+
+  ASK_PHOTO: '📸 Me manda a *foto* que você quer publicar:',
+
+  ASK_COVER_PHOTO:
+    '🖼️ Quer enviar uma *foto de capa* para o vídeo? (Opcional — mande a foto ou escreva "pular"):',
 
   COPY_TOO_SHORT: '❌ A legenda precisa ter pelo menos 3 caracteres. Tente novamente:',
 
-  VIDEO_REQUIRED: '❌ Por favor, envie um *vídeo* (não texto ou imagem):',
+  VIDEO_REQUIRED: '❌ Por favor, envie um *vídeo* (não texto ou imagem).\n\n_(Dica: envie como *documento* para manter a qualidade máxima)_',
+
+  PHOTO_REQUIRED: '❌ Por favor, envie uma *foto*:',
+
+  MEDIA_TYPE_INVALID: '❌ Opção inválida. Digite *1* para vídeo ou *2* para foto:',
+
+  VIDEO_LARGE_WARNING:
+    '⏳ Vídeo recebido! Estamos processando e publicando...\n\n_Vídeos maiores podem levar alguns minutos. Você receberá uma confirmação quando estiver no ar!_',
 
   PUBLISHING_STARTED:
     '🚀 *Publicando!*\n\nEstou publicando em todas as suas redes agora. Você receberá uma confirmação com os links em breve!',
