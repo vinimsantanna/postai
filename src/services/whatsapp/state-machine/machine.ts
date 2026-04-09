@@ -10,7 +10,20 @@ import { parseDate, formatDate } from '@/services/whatsapp/date-parser';
 import { schedulePost, cancelScheduledPost, listScheduledCampaigns } from '@/services/scheduling/scheduler.service';
 import { campaignRepository } from '@/repositories/campaign.repository';
 import type { Platform } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { MESSAGES, MENU_TEXT } from './messages';
+
+async function getConnectedPlatforms(userId: string, clientId?: string | null): Promise<Platform[]> {
+  const tokens = await prisma.apiToken.findMany({
+    where: {
+      userId,
+      clientId: clientId ?? null,
+      deletedAt: null,
+    },
+    select: { platform: true },
+  });
+  return tokens.map((t) => t.platform);
+}
 
 type SessionWithUser = WhatsappSession & { user: User; activeClient: AgencyClient | null };
 
@@ -135,14 +148,26 @@ async function handleMenu(
   }
 
   switch (input) {
-    case '1':
-      await transitionTo(session, 'waiting_copy', {});
+    case '1': {
+      const platforms = await getConnectedPlatforms(session.userId, session.activeClientId);
+      if (platforms.length === 0) {
+        await whatsappService.sendText(message.from, '❌ Nenhuma rede social conectada. Acesse o painel para conectar suas contas antes de publicar.');
+        return;
+      }
+      await transitionTo(session, 'waiting_copy', { platforms });
       await whatsappService.sendText(message.from, MESSAGES.ASK_COPY);
       break;
-    case '2':
-      await transitionTo(session, 'waiting_schedule', { isScheduled: true });
+    }
+    case '2': {
+      const platforms = await getConnectedPlatforms(session.userId, session.activeClientId);
+      if (platforms.length === 0) {
+        await whatsappService.sendText(message.from, '❌ Nenhuma rede social conectada. Acesse o painel para conectar suas contas antes de publicar.');
+        return;
+      }
+      await transitionTo(session, 'waiting_schedule', { isScheduled: true, platforms });
       await whatsappService.sendText(message.from, MESSAGES.ASK_SCHEDULED_COPY);
       break;
+    }
     case '3': {
       await transitionTo(session, 'history', null);
       await whatsappService.sendText(message.from, MESSAGES.HISTORY_LOADING);
