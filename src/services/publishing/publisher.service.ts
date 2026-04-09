@@ -24,7 +24,8 @@ export async function runPublish(
     userId,
     clientId,
     copy: draft.copy ?? '',
-    videoUrl: draft.videoUrl ?? draft.photoUrl,
+    videoUrl: draft.videoUrl,
+    photoUrl: draft.photoUrl,
     thumbnailUrl: draft.coverPhotoUrl,
     platforms,
   });

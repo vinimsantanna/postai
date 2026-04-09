@@ -107,18 +107,35 @@ export function buildNotificationMessage(
 function summarizeError(error: string): string {
   const lower = error.toLowerCase();
 
-  // Extract message from JSON API responses like: "... failed: {"error":{"message":"..."}}"
+  // Extract error details from JSON API responses
   const jsonMatch = error.match(/\{.*\}/s);
   if (jsonMatch) {
     try {
-      const parsed = JSON.parse(jsonMatch[0]) as { error?: { message?: string; code?: number } };
-      const apiMsg = parsed?.error?.message ?? '';
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        error?: { message?: string; code?: number; error_subcode?: number };
+      };
+      const { message: apiMsg, code, error_subcode: sub } = parsed?.error ?? {};
+
+      // Instagram/Meta error codes: 190 = invalid/expired token, 200 = permission
+      if (code === 190) {
+        if (sub === 460 || sub === 467) return 'Token expirado — reconecte a conta no Instagram';
+        return `Conta Instagram inválida (código ${code}.${sub ?? 0}) — reconecte a conta`;
+      }
+      if (code === 200 || code === 10 || code === 100) {
+        return 'Permissão negada pelo Instagram — reconecte e certifique-se de aceitar todas as permissões';
+      }
       if (apiMsg) error = apiMsg;
     } catch { /* ignore */ }
   }
 
+  if (lower.includes('not a business') || lower.includes('not business') || lower.includes('creator')) {
+    return 'A conta Instagram precisa ser do tipo Business ou Creator';
+  }
+  if (lower.includes('permission') || lower.includes('scope')) {
+    return 'Permissão negada — reconecte a conta e aceite todas as permissões';
+  }
   if (lower.includes('token') || lower.includes('unauthorized') || lower.includes('oauth') || lower.includes('401')) {
-    return 'Token expirado — reconecte a conta';
+    return 'Token inválido — reconecte a conta';
   }
   if (lower.includes('quota') || lower.includes('rate limit') || lower.includes('429')) {
     return 'Limite de publicações atingido — tente mais tarde';
@@ -129,9 +146,6 @@ function summarizeError(error: string): string {
   if (lower.includes('invalid user id') || lower.includes('collab')) {
     return 'Usuário do collab inválido ou conta não-business';
   }
-  if (lower.includes('permission') || lower.includes('scope')) {
-    return 'Permissão negada — reconecte a conta';
-  }
 
-  return error.length > 80 ? `${error.slice(0, 77)}...` : error;
+  return error.length > 100 ? `${error.slice(0, 97)}...` : error;
 }
