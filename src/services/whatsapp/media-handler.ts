@@ -10,10 +10,48 @@ const WHATSAPP_HKDF_INFO: Record<string, string> = {
   document: 'WhatsApp Document Keys',
 };
 
+interface DerivedKeys {
+  iv: Buffer;
+  cipherKey: Buffer;
+  macKey: Buffer;
+}
+
+function deriveKeys(mediaKey: Buffer, infoStr: string): DerivedKeys {
+  const salt = Buffer.alloc(32, 0);
+  const expanded = Buffer.from(
+    crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(infoStr), 112),
+  );
+  return {
+    iv: expanded.subarray(0, 16),
+    cipherKey: expanded.subarray(16, 48),
+    macKey: expanded.subarray(48, 80),
+  };
+}
+
+/**
+ * Verifies the HMAC-SHA256 of the CDN file.
+ * WhatsApp CDN file = [fileData][mac(10 bytes)]
+ * mac = HMAC-SHA256(macKey, iv + ciphertext)[:10]
+ * where iv may come from HKDF or from the first 16 bytes of the file.
+ */
+function verifyMac(macKey: Buffer, iv: Buffer, ciphertext: Buffer, mac: Buffer): boolean {
+  const expected = crypto
+    .createHmac('sha256', macKey)
+    .update(iv)
+    .update(ciphertext)
+    .digest()
+    .subarray(0, 10);
+  return expected.length === mac.length && crypto.timingSafeEqual(expected, mac);
+}
+
 /**
  * Decrypts WhatsApp media using AES-256-CBC.
- * The mediaKey is derived via HKDF-SHA256 with type-specific info strings.
- * CDN files end with a 10-byte HMAC suffix that must be stripped before decryption.
+ *
+ * Tries all combinations of:
+ *   - info string: declared type + fallback types
+ *   - IV source: HKDF-derived (spec) or first 16 bytes of CDN file (alt format)
+ *
+ * Selects the combination whose HMAC-SHA256 validates correctly.
  */
 async function decryptWhatsAppMedia(
   encryptedUrl: string,
@@ -21,58 +59,51 @@ async function decryptWhatsAppMedia(
   whatsappMediaType: string,
 ): Promise<Buffer> {
   const mediaKey = Buffer.from(mediaKeyBase64, 'base64');
-  const infoStr = WHATSAPP_HKDF_INFO[whatsappMediaType] ?? 'WhatsApp Document Keys';
-  const salt = Buffer.alloc(32, 0);
 
-  console.log('[media-handler] mediaKey[:8]:', mediaKey.slice(0, 8).toString('hex'), '| len:', mediaKey.length, '| info:', infoStr);
+  // Candidates in priority order: declared type first, then fallbacks
+  const primaryInfo = WHATSAPP_HKDF_INFO[whatsappMediaType] ?? 'WhatsApp Document Keys';
+  const infoStrings = [
+    primaryInfo,
+    ...Object.values(WHATSAPP_HKDF_INFO).filter((s) => s !== primaryInfo),
+  ];
 
-  // Try both the declared type and the alternative (image ↔ document)
-  // Some WhatsApp clients encrypt images-as-documents using image keys
-  const altInfoStr = infoStr === 'WhatsApp Document Keys'
-    ? 'WhatsApp Image Keys'
-    : 'WhatsApp Document Keys';
-  for (const currentInfo of [infoStr, altInfoStr]) {
-    const expanded = Buffer.from(
-      crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(currentInfo), 112),
-    );
-    console.log('[media-handler] trying info:', currentInfo, '| iv:', expanded.slice(0, 16).toString('hex'));
-  }
-
-  const expanded = Buffer.from(
-    crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(infoStr), 112),
-  );
-  const iv = expanded.subarray(0, 16);
-  const cipherKey = expanded.subarray(16, 48);
-
-  console.log('[media-handler] using info:', infoStr, '| iv:', iv.toString('hex'), '| cipherKey[:8]:', cipherKey.slice(0, 8).toString('hex'));
-
-  // Download encrypted CDN file
   const response = await axios.get<ArrayBuffer>(encryptedUrl, {
     responseType: 'arraybuffer',
     timeout: 120_000,
     maxContentLength: 500 * 1024 * 1024,
   });
   const encData = Buffer.from(response.data);
-  console.log('[media-handler] downloaded:', encData.length, 'bytes | first4:', encData.slice(0, 4).toString('hex'));
 
-  // Strip 10-byte HMAC suffix
-  const ciphertext = encData.subarray(0, -10);
-
-  // Try both info strings — some WhatsApp clients use image keys for image documents
-  for (const tryInfo of [infoStr, altInfoStr]) {
-    const tryExpanded = Buffer.from(crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(tryInfo), 112));
-    const tryIv = tryExpanded.subarray(0, 16);
-    const tryKey = tryExpanded.subarray(16, 48);
-    const tryDecipher = crypto.createDecipheriv('aes-256-cbc', tryKey, tryIv);
-    tryDecipher.setAutoPadding(false);
-    const tryResult = Buffer.concat([tryDecipher.update(ciphertext), tryDecipher.final()]);
-    const padByte = tryResult[tryResult.length - 1];
-    console.log('[media-handler] info:', tryInfo, '| first4:', tryResult.slice(0, 4).toString('hex'), '| padByte:', padByte);
+  if (encData.length < 26) {
+    throw new Error(`Downloaded file too small: ${encData.length} bytes`);
   }
 
-  // Decrypt AES-256-CBC with declared type
-  const decipher = crypto.createDecipheriv('aes-256-cbc', cipherKey, iv);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  const mac = encData.subarray(-10);
+  const fileBody = encData.subarray(0, -10); // everything except last 10 bytes
+
+  for (const infoStr of infoStrings) {
+    const keys = deriveKeys(mediaKey, infoStr);
+
+    // Format A: IV from HKDF, ciphertext = entire fileBody
+    if (verifyMac(keys.macKey, keys.iv, fileBody, mac)) {
+      const decipher = crypto.createDecipheriv('aes-256-cbc', keys.cipherKey, keys.iv);
+      return Buffer.concat([decipher.update(fileBody), decipher.final()]);
+    }
+
+    // Format B: IV = first 16 bytes of file, ciphertext = fileBody[16:]
+    if (fileBody.length >= 16) {
+      const fileIv = fileBody.subarray(0, 16);
+      const ciphertext = fileBody.subarray(16);
+      if (verifyMac(keys.macKey, fileIv, ciphertext, mac)) {
+        const decipher = crypto.createDecipheriv('aes-256-cbc', keys.cipherKey, fileIv);
+        return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+      }
+    }
+  }
+
+  throw new Error(
+    `WhatsApp media decryption failed: HMAC mismatch for all key types (mediaType=${whatsappMediaType}, fileSize=${encData.length})`,
+  );
 }
 
 /**
@@ -100,11 +131,8 @@ export async function persistMedia(
     const base64Data = mediaUrl.split(',')[1];
     if (!base64Data) throw new Error('[media-handler] Empty base64 data');
     buffer = Buffer.from(base64Data, 'base64');
-    console.log('[media-handler] base64 inline, size:', buffer.length);
   } else if (mediaKey) {
-    console.log('[media-handler] decrypting locally, type:', whatsappMediaType);
     buffer = await decryptWhatsAppMedia(mediaUrl, mediaKey, whatsappMediaType ?? 'document');
-    console.log('[media-handler] decrypted, size:', buffer.length);
   } else {
     throw new Error('[media-handler] Cannot fetch media: no base64 and no mediaKey');
   }
