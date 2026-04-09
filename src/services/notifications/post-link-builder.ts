@@ -65,6 +65,7 @@ export function formatPlatformLine(
 export function buildNotificationMessage(
   results: Array<{ platform: Platform; success: boolean; postUrl?: string; error?: string }>,
   clientName?: string,
+  isAgency?: boolean,
 ): string {
   const successCount = results.filter((r) => r.success).length;
   const total = results.length;
@@ -98,7 +99,11 @@ export function buildNotificationMessage(
   if (successCount === 0) {
     lines.push('');
     lines.push('🔁 Para tentar novamente, responda: `retentar`');
-    lines.push('⚙️ Ou reconecte suas contas: postai.app/settings/social');
+    if (isAgency) {
+      lines.push('⚙️ Para reconectar: acesse o painel, selecione o cliente e reconecte a conta');
+    } else {
+      lines.push('⚙️ Ou reconecte suas contas: postai.app/settings/social');
+    }
   }
 
   return lines.join('\n');

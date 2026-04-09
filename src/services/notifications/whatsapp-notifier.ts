@@ -9,14 +9,15 @@ export interface NotifyInput {
   phoneNumber: string;
   results: PlatformResult[];
   clientName?: string;
+  isAgency?: boolean;
 }
 
 /**
  * Sends the post-publish WhatsApp notification (AC1/AC2/AC3/AC5).
  */
 export async function notifyPublishResult(input: NotifyInput): Promise<void> {
-  const { phoneNumber, results, clientName } = input;
-  const message = buildNotificationMessage(results, clientName);
+  const { phoneNumber, results, clientName, isAgency } = input;
+  const message = buildNotificationMessage(results, clientName, isAgency);
   await whatsappService.sendText(phoneNumber, message);
 }
 
@@ -63,6 +64,7 @@ export async function retryFailedPlatforms(
   const draft: CampaignDraft = {
     copy: campaign.originalCopy,
     videoUrl: campaign.videoUrl ?? undefined,
+    photoUrl: campaign.photoUrl ?? undefined,
     coverPhotoUrl: campaign.thumbnailUrl ?? undefined,
     platforms: failedPlatforms,
   };
@@ -74,6 +76,7 @@ export async function retryFailedPlatforms(
     {
       copy: draft.copy ?? '',
       videoUrl: draft.videoUrl,
+      photoUrl: draft.photoUrl,
       coverPhotoUrl: draft.coverPhotoUrl,
     },
     clientId,

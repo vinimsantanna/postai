@@ -68,7 +68,7 @@ async function processScheduledPost(job: Job<ScheduledJobData>): Promise<void> {
     }).catch(() => null);
   }
 
-  await notifyPublishResult({ phoneNumber, results });
+  await notifyPublishResult({ phoneNumber, results, isAgency: !!clientId });
 }
 
 /**

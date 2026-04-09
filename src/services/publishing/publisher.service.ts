@@ -87,7 +87,7 @@ export async function runPublish(
     });
   }
 
-  await notifyPublishResult({ phoneNumber, results });
+  await notifyPublishResult({ phoneNumber, results, clientName: clientId ? undefined : undefined, isAgency: !!clientId });
 
   // Publish to Instagram Stories if requested (fire-and-forget, non-blocking)
   if (draft.withStories) {
