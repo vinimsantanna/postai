@@ -59,7 +59,23 @@ export async function persistMedia(
   let buffer: Buffer;
 
   if (messageKey && rawMessage) {
-    buffer = await fetchViaDecryptionEndpoint(messageKey, rawMessage, type);
+    try {
+      buffer = await fetchViaDecryptionEndpoint(messageKey, rawMessage, type);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isDecryptErr = msg.includes('bad decrypt') || msg.includes('DECRYPT_FAILED') || msg.includes('400');
+      if (isDecryptErr && mediaUrl && !mediaUrl.startsWith('data:')) {
+        console.warn('[media-handler] Decryption failed, falling back to direct URL download');
+        const response = await axios.get<Buffer>(mediaUrl, {
+          responseType: 'arraybuffer',
+          timeout: 120_000,
+          maxContentLength: 500 * 1024 * 1024,
+        });
+        buffer = Buffer.from(response.data);
+      } else {
+        throw err;
+      }
+    }
   } else if (mediaUrl.startsWith('data:')) {
     const base64Data = mediaUrl.split(',')[1];
     buffer = Buffer.from(base64Data, 'base64');
