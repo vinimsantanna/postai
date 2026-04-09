@@ -42,9 +42,12 @@ async function decryptWhatsAppMedia(
     maxContentLength: 500 * 1024 * 1024,
   });
   const encData = Buffer.from(response.data);
+  console.log('[media-handler] downloaded bytes:', encData.length, '| first4:', encData.slice(0, 4).toString('hex'), '| last4:', encData.slice(-4).toString('hex'));
+  console.log('[media-handler] iv:', iv.toString('hex'), '| cipherKey[:8]:', cipherKey.slice(0, 8).toString('hex'));
 
   // Strip 10-byte HMAC suffix
   const ciphertext = encData.subarray(0, -10);
+  console.log('[media-handler] ciphertext length:', ciphertext.length, '(must be multiple of 16:', ciphertext.length % 16 === 0, ')');
 
   // Decrypt AES-256-CBC
   const decipher = crypto.createDecipheriv('aes-256-cbc', cipherKey, iv);
