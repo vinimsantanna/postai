@@ -1,9 +1,22 @@
 import type { Platform } from '@prisma/client';
 import { apiTokenRepository } from '@/repositories/api-token.repository';
+import { instagramOAuth } from '@/services/oauth/instagram.oauth';
+import { tiktokOAuth } from '@/services/oauth/tiktok.oauth';
+import { linkedinOAuth } from '@/services/oauth/linkedin.oauth';
+import { youtubeOAuth } from '@/services/oauth/youtube.oauth';
 import { publishToInstagram } from './platforms/instagram.publisher';
 import { publishToTikTok } from './platforms/tiktok.publisher';
 import { publishToLinkedIn } from './platforms/linkedin.publisher';
 import { publishToYouTube } from './platforms/youtube.publisher';
+
+const REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+const oauthRefreshers: Partial<Record<Platform, (userId: string, clientId?: string) => Promise<unknown>>> = {
+  INSTAGRAM: instagramOAuth.refreshToken.bind(instagramOAuth),
+  TIKTOK: tiktokOAuth.refreshToken.bind(tiktokOAuth),
+  LINKEDIN: linkedinOAuth.refreshToken.bind(linkedinOAuth),
+  YOUTUBE: youtubeOAuth.refreshToken.bind(youtubeOAuth),
+};
 
 export interface PublishInput {
   copy: string;
@@ -30,9 +43,19 @@ export async function publishToAllPlatforms(
   input: PublishInput,
   clientId?: string,
 ): Promise<PlatformResult[]> {
-  const tokens = await apiTokenRepository.findByUser(userId, clientId);
+  let tokens = await apiTokenRepository.findByUser(userId, clientId);
 
   if (tokens.length === 0) return [];
+
+  // Proactively refresh tokens expiring within 7 days
+  const refreshJobs = tokens
+    .filter((t) => t.expiresAt && t.expiresAt.getTime() - Date.now() < REFRESH_THRESHOLD_MS)
+    .map((t) => oauthRefreshers[t.platform]?.(userId, clientId ?? undefined)?.catch(() => null));
+
+  if (refreshJobs.length > 0) {
+    await Promise.all(refreshJobs);
+    tokens = await apiTokenRepository.findByUser(userId, clientId);
+  }
 
   const tasks = tokens.map((token) =>
     withRetry(() => callPlatform(token.platform, token.accessToken, input))
