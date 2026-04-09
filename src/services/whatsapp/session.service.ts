@@ -72,7 +72,8 @@ async function handleIdentification(phone: string, message: ParsedMessage): Prom
       return;
     }
 
-    await sessionRepository.upsertSession(user.id, phone);
+    const session = await sessionRepository.upsertSession(user.id, phone);
+    await sessionRepository.updateStep(session.id, 'select_client', null);
     const clientList = clients.map((c, i) => ({
       index: i + 1,
       name: c.name,
