@@ -352,8 +352,6 @@ async function handleWaitingVideo(
     message.messageId,
     message.mediaKey,
     message.whatsappMediaType,
-    message.remoteJid,
-    message.rawMessageContent,
   );
   const newDraft = { ...draft, videoUrl: permanentUrl };
   await transitionTo(session, 'waiting_cover_photo', newDraft);
@@ -377,8 +375,6 @@ async function handleWaitingPhoto(
     message.messageId,
     message.mediaKey,
     message.whatsappMediaType,
-    message.remoteJid,
-    message.rawMessageContent,
   );
   const newDraft = { ...draft, photoUrl: permanentUrl };
 
@@ -407,8 +403,6 @@ async function handleWaitingCoverPhoto(
       message.messageId,
       message.mediaKey,
       message.whatsappMediaType,
-      message.remoteJid,
-      message.rawMessageContent,
     );
     newDraft = { ...draft, coverPhotoUrl: permanentUrl };
   }

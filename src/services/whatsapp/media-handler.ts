@@ -52,55 +52,11 @@ async function decryptWhatsAppMedia(
 }
 
 /**
- * Fallback when webhookBase64=true strips mediaKey from document messages.
- * Calls Evolution API's getBase64FromMediaMessage to decrypt server-side.
- */
-async function fetchBase64ViaEvolutionApi(
-  remoteJid: string,
-  messageId: string,
-  rawMessageContent: unknown,
-  whatsappMediaType: string,
-): Promise<Buffer> {
-  const apiUrl = process.env.EVOLUTION_API_URL;
-  const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE;
-
-  if (!apiUrl || !apiKey || !instance) {
-    throw new Error('[media-handler] Evolution API not configured for fallback');
-  }
-
-  const messageTypeKey = `${whatsappMediaType}Message`;
-  const body = {
-    message: {
-      key: { remoteJid, fromMe: false, id: messageId },
-      message: { [messageTypeKey]: rawMessageContent },
-    },
-    convertToMp4: false,
-  };
-
-  console.log('[media-handler] fallback: calling Evolution getBase64FromMediaMessage, type:', whatsappMediaType);
-  const response = await axios.post(
-    `${apiUrl}/message/getBase64FromMediaMessage/${instance}`,
-    body,
-    { headers: { apikey: apiKey }, timeout: 30_000 },
-  );
-
-  const base64: string = response.data?.base64;
-  if (!base64) throw new Error('[media-handler] Evolution API returned no base64');
-
-  const raw = base64.includes(',') ? base64.split(',')[1] : base64;
-  return Buffer.from(raw, 'base64');
-}
-
-/**
  * Uploads media to permanent storage (Supabase).
  *
  * mediaUrl can be:
  *   - data:<mimetype>;base64,<data>  — from webhookBase64=true (no decryption needed)
  *   - https://mmg.whatsapp.net/...   — encrypted CDN (decrypted locally with mediaKey)
- *
- * When mediaKey is absent (webhookBase64=true strips it for documents),
- * falls back to Evolution API's getBase64FromMediaMessage endpoint.
  */
 export async function persistMedia(
   mediaUrl: string,
@@ -109,8 +65,6 @@ export async function persistMedia(
   messageId: string,
   mediaKey?: string,
   whatsappMediaType?: string,
-  remoteJid?: string,
-  rawMessageContent?: unknown,
 ): Promise<string> {
   const ext = type === 'video' ? 'mp4' : 'jpg';
   const contentType = type === 'video' ? 'video/mp4' : 'image/jpeg';
@@ -127,11 +81,8 @@ export async function persistMedia(
     console.log('[media-handler] decrypting locally, type:', whatsappMediaType);
     buffer = await decryptWhatsAppMedia(mediaUrl, mediaKey, whatsappMediaType ?? 'document');
     console.log('[media-handler] decrypted, size:', buffer.length);
-  } else if (remoteJid && rawMessageContent) {
-    buffer = await fetchBase64ViaEvolutionApi(remoteJid, messageId, rawMessageContent, whatsappMediaType ?? 'document');
-    console.log('[media-handler] evolution fallback, size:', buffer.length);
   } else {
-    throw new Error('[media-handler] Cannot fetch media: no base64, no mediaKey, no fallback context');
+    throw new Error('[media-handler] Cannot fetch media: no base64 and no mediaKey');
   }
 
   return supabaseStorage.upload(path, buffer, contentType);
