@@ -28,6 +28,9 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
     return { type: 'text', from, text: msg.conversation.trim(), messageId, timestamp };
   }
 
+  // rawMessage: full WAMessage structure that the decryption endpoint expects
+  const rawMessage = { key: data.key, message: msg } as Record<string, unknown>;
+
   // Image
   if (msg.imageMessage) {
     return {
@@ -39,7 +42,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       messageId,
       timestamp,
       messageKey,
-      rawMessage: msg as Record<string, unknown>,
+      rawMessage,
     };
   }
 
@@ -54,7 +57,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       messageId,
       timestamp,
       messageKey,
-      rawMessage: msg as Record<string, unknown>,
+      rawMessage,
     };
   }
 
@@ -68,7 +71,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       messageId,
       timestamp,
       messageKey,
-      rawMessage: msg as Record<string, unknown>,
+      rawMessage,
     };
   }
 
@@ -83,7 +86,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       messageId,
       timestamp,
       messageKey,
-      rawMessage: msg as Record<string, unknown>,
+      rawMessage,
     };
   }
 

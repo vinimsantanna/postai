@@ -16,11 +16,9 @@ async function fetchViaDecryptionEndpoint(
   type: 'video' | 'image',
 ): Promise<Buffer> {
   const url = `${EVOLUTION_BASE_URL}/chat/getBase64FromMediaMessage/${EVOLUTION_INSTANCE}`;
+  // rawMessage already contains { key, message } — pass it directly as the WAMessage object
   const body = {
-    message: {
-      key: messageKey,
-      message: rawMessage,
-    },
+    message: rawMessage,
     convertToMp4: false,
   };
 
