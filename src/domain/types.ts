@@ -10,10 +10,12 @@ export interface ParsedMessage {
   type: MessageType;
   from: string;       // normalized phone number
   text?: string;      // text content or button label
-  mediaUrl?: string;  // data: URL (base64) or CDN URL
+  mediaUrl?: string;  // data: URL (base64) or encrypted CDN URL
   mimeType?: string;
   messageId: string;
   timestamp: number;
+  // Full WAMessage passed to Evolution API decryption endpoint when mediaUrl is CDN URL
+  rawMessage?: Record<string, unknown>;
 }
 
 export interface EvolutionWebhookEvent {
