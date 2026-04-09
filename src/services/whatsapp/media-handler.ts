@@ -46,6 +46,14 @@ export async function persistMedia(
 async function decryptViaEvolutionApi(rawMessage: Record<string, unknown>): Promise<Buffer> {
   const url = `${EVOLUTION_BASE_URL}/chat/getBase64FromMediaMessage/${EVOLUTION_INSTANCE}`;
 
+  // Log the keys present so we can see if mediaKey/fileEncSha256 are included
+  const msgContent = rawMessage.message as Record<string, unknown> | undefined;
+  const mediaFields = Object.keys(msgContent ?? {});
+  const innerFields = msgContent ? Object.keys(Object.values(msgContent)[0] as object ?? {}) : [];
+  console.log('[media-handler] rawMessage keys:', Object.keys(rawMessage));
+  console.log('[media-handler] message type fields:', mediaFields);
+  console.log('[media-handler] inner message fields:', innerFields);
+
   const response = await axios.post<{ base64: string }>(
     url,
     { message: rawMessage, convertToMp4: false },
@@ -56,5 +64,7 @@ async function decryptViaEvolutionApi(rawMessage: Record<string, unknown>): Prom
   if (!base64) throw new Error('[media-handler] Evolution API returned no base64');
 
   const raw = base64.includes(',') ? base64.split(',')[1] : base64;
-  return Buffer.from(raw, 'base64');
+  const buf = Buffer.from(raw, 'base64');
+  console.log('[media-handler] decrypted buffer size:', buf.length);
+  return buf;
 }
