@@ -339,8 +339,7 @@ async function handleWaitingVideo(
   message: ParsedMessage,
   draft: CampaignDraft,
 ): Promise<void> {
-  const isVideoDocument = message.type === 'document' && message.mimeType?.startsWith('video/');
-  if ((message.type !== 'video' && !isVideoDocument) || !message.mediaUrl) {
+  if (message.type !== 'video' || !message.mediaUrl) {
     await whatsappService.sendText(message.from, MESSAGES.VIDEO_REQUIRED);
     return;
   }
@@ -362,8 +361,7 @@ async function handleWaitingPhoto(
   message: ParsedMessage,
   draft: CampaignDraft,
 ): Promise<void> {
-  const isImageDocument = message.type === 'document' && message.mimeType?.startsWith('image/');
-  if ((message.type !== 'image' && !isImageDocument) || !message.mediaUrl) {
+  if (message.type !== 'image' || !message.mediaUrl) {
     await whatsappService.sendText(message.from, MESSAGES.PHOTO_REQUIRED);
     return;
   }
@@ -392,8 +390,7 @@ async function handleWaitingCoverPhoto(
 ): Promise<void> {
   let newDraft = { ...draft };
 
-  const isImageDocument = message.type === 'document' && message.mimeType?.startsWith('image/');
-  if ((message.type === 'image' || isImageDocument) && message.mediaUrl) {
+  if (message.type === 'image' && message.mediaUrl) {
     const permanentUrl = await persistMedia(
       message.mediaUrl,
       session.userId,
