@@ -21,6 +21,13 @@ export const webhookController = {
         }
 
         console.log('[webhook] processing type:', message.type, 'from:', message.from);
+        // Temp: log raw media message fields for debugging
+        const rawData = event.data as Record<string, unknown>;
+        const msg = rawData.message as Record<string, unknown> | undefined;
+        if (msg) {
+          const mediaMsg = (msg.documentMessage ?? msg.imageMessage ?? msg.videoMessage) as Record<string, unknown> | undefined;
+          if (mediaMsg) console.log('[webhook] media fields:', Object.keys(mediaMsg));
+        }
         await sessionService.handleIncoming(message);
         console.log('[webhook] done');
       } catch (err: unknown) {
