@@ -106,14 +106,32 @@ export function buildNotificationMessage(
 
 function summarizeError(error: string): string {
   const lower = error.toLowerCase();
-  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('token')) {
-    return 'Token expirado — reconecte em postai.app/settings';
+
+  // Extract message from JSON API responses like: "... failed: {"error":{"message":"..."}}"
+  const jsonMatch = error.match(/\{.*\}/s);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]) as { error?: { message?: string; code?: number } };
+      const apiMsg = parsed?.error?.message ?? '';
+      if (apiMsg) error = apiMsg;
+    } catch { /* ignore */ }
+  }
+
+  if (lower.includes('token') || lower.includes('unauthorized') || lower.includes('oauth') || lower.includes('401')) {
+    return 'Token expirado — reconecte a conta';
   }
   if (lower.includes('quota') || lower.includes('rate limit') || lower.includes('429')) {
     return 'Limite de publicações atingido — tente mais tarde';
   }
-  if (lower.includes('timeout') || lower.includes('network') || lower.includes('5')) {
-    return 'Erro temporário — tente novamente';
+  if (lower.includes('timeout') || lower.includes('network') || lower.includes('econnreset')) {
+    return 'Erro de rede — tente novamente';
   }
-  return error.slice(0, 80);
+  if (lower.includes('invalid user id') || lower.includes('collab')) {
+    return 'Usuário do collab inválido ou conta não-business';
+  }
+  if (lower.includes('permission') || lower.includes('scope')) {
+    return 'Permissão negada — reconecte a conta';
+  }
+
+  return error.length > 80 ? `${error.slice(0, 77)}...` : error;
 }

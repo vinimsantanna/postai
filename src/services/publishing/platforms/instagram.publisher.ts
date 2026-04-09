@@ -49,7 +49,10 @@ async function publishReel(
     access_token: accessToken,
   };
   if (coverPhotoUrl) containerBody.cover_url = coverPhotoUrl;
-  if (collaborators?.length) containerBody.collaborators = collaborators;
+  if (collaborators?.length) {
+    const resolvedIds = await resolveCollaboratorIds(igUserId, accessToken, collaborators);
+    if (resolvedIds.length > 0) containerBody.collaborators = resolvedIds;
+  }
 
   const containerRes = await fetch(`${BASE}/${igUserId}/media`, {
     method: 'POST',
@@ -123,6 +126,33 @@ async function getPermalink(mediaId: string, accessToken: string): Promise<strin
   const res = await fetch(`${BASE}/${mediaId}?fields=permalink&access_token=${accessToken}`);
   if (!res.ok) return undefined;
   return ((await res.json()) as { permalink?: string }).permalink;
+}
+
+/**
+ * Resolves Instagram usernames to numeric user IDs via Business Discovery API.
+ * Only works for public Business/Creator accounts.
+ * Silently skips usernames that can't be resolved.
+ */
+async function resolveCollaboratorIds(
+  igUserId: string,
+  accessToken: string,
+  usernames: string[],
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (const username of usernames) {
+    try {
+      const res = await fetch(
+        `${BASE}/${igUserId}?fields=business_discovery.fields(id)&username=${encodeURIComponent(username)}&access_token=${accessToken}`,
+      );
+      if (!res.ok) continue;
+      const data = (await res.json()) as { business_discovery?: { id?: string } };
+      const id = data?.business_discovery?.id;
+      if (id) ids.push(id);
+    } catch {
+      // skip unresolvable username
+    }
+  }
+  return ids;
 }
 
 function sleep(ms: number) {
