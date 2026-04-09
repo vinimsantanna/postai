@@ -13,7 +13,7 @@ export const whatsappService = {
     const { url, key, instance } = getConfig();
     await axios.post(
       `${url}/message/sendText/${instance}`,
-      { number: to, textMessage: { text } },
+      { number: to, text },
       { headers: { apikey: key } },
     );
   },
