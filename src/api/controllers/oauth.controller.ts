@@ -67,10 +67,12 @@ export const oauthController = {
       }
 
       const result = await oauthProviders[slug].handleCallback(code, state);
-      res.json({ success: true, ...result });
+      const appUrl = process.env.APP_URL ?? '';
+      res.redirect(`${appUrl}/agency.html?connected=${result.platform}`);
     } catch (err: unknown) {
       const e = err as { status?: number; message: string };
-      res.status(e.status ?? 500).json({ error: e.message });
+      const appUrl = process.env.APP_URL ?? '';
+      res.redirect(`${appUrl}/agency.html?error=${encodeURIComponent(e.message)}`);
     }
   },
 
