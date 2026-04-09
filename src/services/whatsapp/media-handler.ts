@@ -34,7 +34,7 @@ export async function persistMedia(
   } else if (rawMessage) {
     // CDN URL (encrypted) — decrypt via Evolution API
     console.log('[media-handler] CDN URL, trying Evolution API decryption...');
-    buffer = await decryptViaEvolutionApi(rawMessage);
+    buffer = await decryptViaEvolutionApi(rawMessage, type);
     console.log('[media-handler] decrypted, size:', buffer.length, 'bytes');
   } else {
     throw new Error('[media-handler] Cannot fetch media: no base64 and no rawMessage for decryption');
@@ -43,20 +43,15 @@ export async function persistMedia(
   return supabaseStorage.upload(path, buffer, contentType);
 }
 
-async function decryptViaEvolutionApi(rawMessage: Record<string, unknown>): Promise<Buffer> {
+async function decryptViaEvolutionApi(
+  rawMessage: Record<string, unknown>,
+  type: 'video' | 'image',
+): Promise<Buffer> {
   const url = `${EVOLUTION_BASE_URL}/chat/getBase64FromMediaMessage/${EVOLUTION_INSTANCE}`;
-
-  // Log the keys present so we can see if mediaKey/fileEncSha256 are included
-  const msgContent = rawMessage.message as Record<string, unknown> | undefined;
-  const mediaFields = Object.keys(msgContent ?? {});
-  const innerFields = msgContent ? Object.keys(Object.values(msgContent)[0] as object ?? {}) : [];
-  console.log('[media-handler] rawMessage keys:', Object.keys(rawMessage));
-  console.log('[media-handler] message type fields:', mediaFields);
-  console.log('[media-handler] inner message fields:', innerFields);
 
   const response = await axios.post<{ base64: string }>(
     url,
-    { message: rawMessage, convertToMp4: false },
+    { message: rawMessage, convertToMp4: type === 'video' },
     { headers: { apikey: EVOLUTION_API_KEY }, timeout: 60_000 },
   );
 
@@ -64,7 +59,5 @@ async function decryptViaEvolutionApi(rawMessage: Record<string, unknown>): Prom
   if (!base64) throw new Error('[media-handler] Evolution API returned no base64');
 
   const raw = base64.includes(',') ? base64.split(',')[1] : base64;
-  const buf = Buffer.from(raw, 'base64');
-  console.log('[media-handler] decrypted buffer size:', buf.length);
-  return buf;
+  return Buffer.from(raw, 'base64');
 }

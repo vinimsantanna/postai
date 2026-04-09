@@ -9,7 +9,8 @@ export const MESSAGES = {
   ASK_MEDIA_TYPE:
     '📸 O que você quer publicar?\n\n1️⃣ Vídeo\n2️⃣ Foto\n\nDigite *1* ou *2*:',
 
-  ASK_VIDEO: '🎬 Me manda o *vídeo* que você quer publicar:',
+  ASK_VIDEO:
+    '🎬 Me manda o *vídeo* que você quer publicar:\n\n_(Para melhor qualidade, envie como *documento*)_',
 
   ASK_PHOTO: '📸 Me manda a *foto* que você quer publicar:',
 
@@ -18,7 +19,7 @@ export const MESSAGES = {
 
   COPY_TOO_SHORT: '❌ A legenda precisa ter pelo menos 3 caracteres. Tente novamente:',
 
-  VIDEO_REQUIRED: '❌ Por favor, envie um *vídeo* (não texto ou imagem):',
+  VIDEO_REQUIRED: '❌ Por favor, envie um *vídeo* (não texto ou imagem).\n\n_(Dica: envie como *documento* para manter a qualidade máxima)_',
 
   PHOTO_REQUIRED: '❌ Por favor, envie uma *foto*:',
 
