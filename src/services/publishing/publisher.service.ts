@@ -1,5 +1,7 @@
 import type { Platform } from '@prisma/client';
 import { publishToAllPlatforms, type PlatformResult } from './parallel-publisher';
+import { publishInstagramStory } from './platforms/instagram.publisher';
+import { apiTokenRepository } from '@/repositories/api-token.repository';
 import { campaignRepository } from '@/repositories/campaign.repository';
 import { notifyPublishResult } from '@/services/notifications/whatsapp-notifier';
 import { whatsappService } from '@/services/whatsapp/whatsapp.service';
@@ -85,4 +87,25 @@ export async function runPublish(
   }
 
   await notifyPublishResult({ phoneNumber, results });
+
+  // Publish to Instagram Stories if requested (fire-and-forget, non-blocking)
+  if (draft.withStories) {
+    publishInstagramStoryIfConnected(userId, draft, clientId, phoneNumber).catch((err) =>
+      console.error('[stories] Error publishing to Stories:', err),
+    );
+  }
+}
+
+async function publishInstagramStoryIfConnected(
+  userId: string,
+  draft: CampaignDraft,
+  clientId: string | undefined,
+  phoneNumber: string,
+): Promise<void> {
+  const tokens = await apiTokenRepository.findByUser(userId, clientId);
+  const igToken = tokens.find((t) => t.platform === 'INSTAGRAM');
+  if (!igToken) return;
+
+  await publishInstagramStory(igToken.accessToken, draft.videoUrl, draft.photoUrl);
+  await whatsappService.sendText(phoneNumber, '📖 Story publicado no Instagram!');
 }

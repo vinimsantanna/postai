@@ -1,5 +1,5 @@
 /**
- * Instagram Business API — supports Reels (video) and Feed (photo).
+ * Instagram Business API — supports Reels (video), Feed (photo) and Stories.
  * Docs: https://developers.facebook.com/docs/instagram-api/reference/ig-user/media
  */
 
@@ -18,20 +18,62 @@ export async function publishToInstagram(
   videoUrl?: string,
   photoUrl?: string,
   coverPhotoUrl?: string,
-  collaborators?: string[],
 ): Promise<InstagramPublishResult> {
-  // Step 1: Get IG user ID
   const meRes = await fetch(`${BASE}/me?fields=id,username&access_token=${accessToken}`);
   if (!meRes.ok) throw new Error(`Instagram /me failed: ${await meRes.text()}`);
   const me = (await meRes.json()) as { id: string; username: string };
 
   if (videoUrl) {
-    return publishReel(me.id, accessToken, copy, videoUrl, coverPhotoUrl, collaborators);
+    return publishReel(me.id, accessToken, copy, videoUrl, coverPhotoUrl);
   } else if (photoUrl) {
     return publishPhoto(me.id, accessToken, copy, photoUrl);
   } else {
     throw new Error('Instagram: videoUrl or photoUrl is required');
   }
+}
+
+/**
+ * Publishes a Story (video or photo). Fire-and-forget from caller.
+ * Stories expire after 24h and don't appear in the feed.
+ */
+export async function publishInstagramStory(
+  accessToken: string,
+  videoUrl?: string,
+  photoUrl?: string,
+): Promise<void> {
+  const meRes = await fetch(`${BASE}/me?fields=id&access_token=${accessToken}`);
+  if (!meRes.ok) throw new Error(`Instagram /me failed: ${await meRes.text()}`);
+  const me = (await meRes.json()) as { id: string };
+
+  const containerBody: Record<string, unknown> = {
+    media_type: 'STORIES',
+    access_token: accessToken,
+  };
+
+  if (videoUrl) {
+    containerBody.video_url = videoUrl;
+  } else if (photoUrl) {
+    containerBody.image_url = photoUrl;
+  } else {
+    throw new Error('Instagram Story: videoUrl or photoUrl is required');
+  }
+
+  const containerRes = await fetch(`${BASE}/${me.id}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(containerBody),
+  });
+  if (!containerRes.ok) throw new Error(`Instagram story container failed: ${await containerRes.text()}`);
+  const { id: containerId } = (await containerRes.json()) as { id: string };
+
+  if (videoUrl) await pollContainerReady(containerId, accessToken);
+
+  const publishRes = await fetch(`${BASE}/${me.id}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: containerId, access_token: accessToken }),
+  });
+  if (!publishRes.ok) throw new Error(`Instagram story publish failed: ${await publishRes.text()}`);
 }
 
 async function publishReel(
@@ -40,7 +82,6 @@ async function publishReel(
   copy: string,
   videoUrl: string,
   coverPhotoUrl?: string,
-  collaborators?: string[],
 ): Promise<InstagramPublishResult> {
   const containerBody: Record<string, unknown> = {
     media_type: 'REELS',
@@ -49,10 +90,6 @@ async function publishReel(
     access_token: accessToken,
   };
   if (coverPhotoUrl) containerBody.cover_url = coverPhotoUrl;
-  if (collaborators?.length) {
-    const resolvedIds = await resolveCollaboratorIds(igUserId, accessToken, collaborators);
-    if (resolvedIds.length > 0) containerBody.collaborators = resolvedIds;
-  }
 
   const containerRes = await fetch(`${BASE}/${igUserId}/media`, {
     method: 'POST',
@@ -126,33 +163,6 @@ async function getPermalink(mediaId: string, accessToken: string): Promise<strin
   const res = await fetch(`${BASE}/${mediaId}?fields=permalink&access_token=${accessToken}`);
   if (!res.ok) return undefined;
   return ((await res.json()) as { permalink?: string }).permalink;
-}
-
-/**
- * Resolves Instagram usernames to numeric user IDs via Business Discovery API.
- * Only works for public Business/Creator accounts.
- * Silently skips usernames that can't be resolved.
- */
-async function resolveCollaboratorIds(
-  igUserId: string,
-  accessToken: string,
-  usernames: string[],
-): Promise<string[]> {
-  const ids: string[] = [];
-  for (const username of usernames) {
-    try {
-      const res = await fetch(
-        `${BASE}/${igUserId}?fields=business_discovery.fields(id)&username=${encodeURIComponent(username)}&access_token=${accessToken}`,
-      );
-      if (!res.ok) continue;
-      const data = (await res.json()) as { business_discovery?: { id?: string } };
-      const id = data?.business_discovery?.id;
-      if (id) ids.push(id);
-    } catch {
-      // skip unresolvable username
-    }
-  }
-  return ids;
 }
 
 function sleep(ms: number) {

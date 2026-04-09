@@ -75,6 +75,7 @@ export interface CampaignDraft {
   platforms?: string[];
   scheduledAt?: string;      // ISO string UTC
   isScheduled?: boolean;     // true when coming from option '2'
+  withStories?: boolean;     // true when user wants to also post to Instagram Stories
   lastCampaignId?: string;   // set after publish so user can "retentar"
 }
 

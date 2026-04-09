@@ -545,13 +545,17 @@ async function handleConfirmPublish(
   const isAgency = session.user.plan === 'AGENCY_SYMPHONY';
   const clientName = session.activeClient?.name;
 
-  if (input === 'confirmar' || input === 'ok' || input === 'sim' || input === '1') {
+  const isConfirm = input === 'confirmar' || input === 'ok' || input === 'sim' || input === '1';
+  const isConfirmWithStories = input === 'stories' || input === 'confirmar + stories';
+
+  if (isConfirm || isConfirmWithStories) {
+    const finalDraft = isConfirmWithStories ? { ...draft, withStories: true } : draft;
     await transitionTo(session, 'menu', null);
     const publishingMsg = clientName
       ? `🚀 *Publicando como: ${clientName}!*\n\nPublicando em todas as redes agora. Você receberá os links em breve!`
       : MESSAGES.PUBLISHING_STARTED;
     await whatsappService.sendText(message.from, publishingMsg);
-    runPublish(session.userId, message.from, draft, session.activeClientId ?? undefined).catch(
+    runPublish(session.userId, message.from, finalDraft, session.activeClientId ?? undefined).catch(
       (err) => console.error('[publisher] Unhandled error:', err),
     );
   } else if (input === 'cancelar' || input === 'não' || input === 'nao' || input === '2') {
@@ -585,6 +589,8 @@ function confirmMessage(draft: CampaignDraft, clientName?: string): string {
     ? `🖼️ *Foto de capa:* ${draft.coverPhotoUrl ? '✅ Enviada' : 'Não enviada'}`
     : '';
 
+  const hasInstagram = draft.platforms?.some((p) => p === 'INSTAGRAM');
+
   return [
     '📋 *Confirme sua publicação:*',
     '',
@@ -595,7 +601,9 @@ function confirmMessage(draft: CampaignDraft, clientName?: string): string {
     `📱 *Plataformas:* ${platforms}`,
     draft.scheduledAt ? `⏰ *Agendado para:* ${draft.scheduledAt}` : '',
     '',
-    'Digite *confirmar* para publicar ou *cancelar* para desistir.',
+    'Digite *confirmar* para publicar',
+    hasInstagram ? 'Digite *stories* para publicar + Story no Instagram' : '',
+    'Digite *cancelar* para desistir',
   ]
     .filter(Boolean)
     .join('\n');
