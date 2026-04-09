@@ -453,6 +453,8 @@ async function handleWaitingScheduleDate(
   const formatted = formatDate(date);
   const platforms = (draft.platforms ?? ['Instagram', 'TikTok', 'LinkedIn', 'YouTube']).join(', ');
   const clientName = session.activeClient?.name;
+  const isVideo = draft.mediaType === 'video' || draft.videoUrl;
+  const mediaLine = isVideo ? `🎬 *Vídeo:* ✅` : `📸 *Foto:* ✅`;
   await whatsappService.sendText(
     message.from,
     [
@@ -460,7 +462,7 @@ async function handleWaitingScheduleDate(
       '',
       clientName ? `👤 *Cliente:* ${clientName}` : '',
       `📝 *Legenda:* ${(draft.copy ?? '').slice(0, 80)}...`,
-      `🎬 *Vídeo:* ✅`,
+      mediaLine,
       `📅 *Data:* ${formatted}`,
       `📱 *Plataformas:* ${platforms}`,
       '',
