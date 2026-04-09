@@ -63,4 +63,16 @@ export const campaignRepository = {
       take: limit,
     });
   },
+
+  async findRecentPublished(userId: string, limit = 5) {
+    return prisma.campaign.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        status: { in: ['PUBLISHED', 'PARTIAL_FAILURE', 'FAILED'] },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+    });
+  },
 };

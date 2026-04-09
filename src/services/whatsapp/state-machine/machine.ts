@@ -84,9 +84,6 @@ export async function processMessage(
     case 'confirm_publish':
       await handleConfirmPublish(session, message, draft);
       break;
-    case 'history':
-      await handleHistory(session, message);
-      break;
     default:
       await transitionTo(session, 'menu', null);
       await whatsappService.sendText(message.from, MENU_TEXT(session.user.name, session.user.plan === 'AGENCY_SYMPHONY'));
@@ -185,21 +182,39 @@ async function handleMenu(
       break;
     }
     case '3': {
-      await transitionTo(session, 'history', null);
       await whatsappService.sendText(message.from, MESSAGES.HISTORY_LOADING);
-      const scheduled = await listScheduledCampaigns(session.userId);
-      if (scheduled.length === 0) {
+      const [recent, scheduled] = await Promise.all([
+        campaignRepository.findRecentPublished(session.userId),
+        listScheduledCampaigns(session.userId),
+      ]);
+
+      if (recent.length === 0 && scheduled.length === 0) {
         await whatsappService.sendText(message.from, MESSAGES.HISTORY_EMPTY);
       } else {
-        const lines = ['📅 *Posts agendados:*', ''];
-        for (const s of scheduled) {
-          const platformNames = s.platforms.join(', ');
-          lines.push(`${s.index}. ${s.formattedDate} — ${platformNames}`);
+        const lines: string[] = ['📊 *Histórico de publicações:*', ''];
+
+        if (recent.length > 0) {
+          lines.push('*Recentes:*');
+          for (const c of recent) {
+            const icon = c.status === 'PUBLISHED' ? '✅' : c.status === 'PARTIAL_FAILURE' ? '⚠️' : '❌';
+            const platforms = (c.platforms as Platform[]).join(', ');
+            const date = formatDate(c.publishedAt ?? c.createdAt);
+            lines.push(`${icon} ${date} — ${platforms}`);
+          }
         }
-        lines.push('', 'Para cancelar: *cancelar 1* (ou o número do post)');
+
+        if (scheduled.length > 0) {
+          if (recent.length > 0) lines.push('');
+          lines.push('*Agendados:*');
+          for (const s of scheduled) {
+            lines.push(`${s.index}. ${s.formattedDate} — ${s.platforms.join(', ')}`);
+          }
+          lines.push('', 'Para cancelar: *cancelar 1* (ou o número do agendamento)');
+        }
+
         await whatsappService.sendText(message.from, lines.join('\n'));
       }
-      await transitionTo(session, 'menu', draft);
+
       await whatsappService.sendText(message.from, MENU_TEXT(session.user.name, session.user.plan === 'AGENCY_SYMPHONY'));
       break;
     }
@@ -412,8 +427,8 @@ async function handleWaitingSchedule(
     return;
   }
   const newDraft = { ...draft, copy: message.text };
-  await transitionTo(session, 'waiting_video', newDraft);
-  await whatsappService.sendText(message.from, MESSAGES.ASK_VIDEO);
+  await transitionTo(session, 'waiting_media_type', newDraft);
+  await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
 }
 
 async function handleWaitingScheduleDate(
@@ -546,13 +561,6 @@ async function handleConfirmPublish(
   } else {
     await whatsappService.sendText(message.from, confirmMessage(draft, clientName));
   }
-}
-
-async function handleHistory(
-  _session: SessionWithUser,
-  _message: ParsedMessage,
-): Promise<void> {
-  // handled in handleMenu case '3' — placeholder
 }
 
 // ============================================================

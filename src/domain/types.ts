@@ -64,8 +64,7 @@ export type ConversationState =
   | 'waiting_schedule'
   | 'waiting_schedule_date'
   | 'confirm_schedule'
-  | 'confirm_publish'
-  | 'history';
+  | 'confirm_publish';
 
 export interface CampaignDraft {
   copy?: string;
