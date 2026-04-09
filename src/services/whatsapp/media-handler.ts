@@ -21,19 +21,19 @@ async function decryptWhatsAppMedia(
   whatsappMediaType: string,
 ): Promise<Buffer> {
   const mediaKey = Buffer.from(mediaKeyBase64, 'base64');
-  const info = Buffer.from(WHATSAPP_HKDF_INFO[whatsappMediaType] ?? 'WhatsApp Document Keys');
+  const infoStr = WHATSAPP_HKDF_INFO[whatsappMediaType] ?? 'WhatsApp Document Keys';
   const salt = Buffer.alloc(32, 0);
 
-  // HKDF extract + expand (112 bytes)
-  const prk = crypto.createHmac('sha256', salt).update(mediaKey).digest();
-  let t = Buffer.alloc(0);
-  let expanded = Buffer.alloc(0);
-  for (let i = 1; expanded.length < 112; i++) {
-    t = crypto.createHmac('sha256', prk).update(Buffer.concat([t, info, Buffer.from([i])])).digest();
-    expanded = Buffer.concat([expanded, t]);
-  }
+  console.log('[media-handler] mediaKey[:8]:', mediaKey.slice(0, 8).toString('hex'), '| len:', mediaKey.length, '| info:', infoStr);
+
+  // Use Node.js built-in HKDF (crypto.hkdfSync, Node 15+)
+  const expanded = Buffer.from(
+    crypto.hkdfSync('sha256', mediaKey, salt, Buffer.from(infoStr), 112),
+  );
   const iv = expanded.subarray(0, 16);
   const cipherKey = expanded.subarray(16, 48);
+
+  console.log('[media-handler] iv:', iv.toString('hex'), '| cipherKey[:8]:', cipherKey.slice(0, 8).toString('hex'));
 
   // Download encrypted CDN file
   const response = await axios.get<ArrayBuffer>(encryptedUrl, {
@@ -42,12 +42,10 @@ async function decryptWhatsAppMedia(
     maxContentLength: 500 * 1024 * 1024,
   });
   const encData = Buffer.from(response.data);
-  console.log('[media-handler] downloaded bytes:', encData.length, '| first4:', encData.slice(0, 4).toString('hex'), '| last4:', encData.slice(-4).toString('hex'));
-  console.log('[media-handler] iv:', iv.toString('hex'), '| cipherKey[:8]:', cipherKey.slice(0, 8).toString('hex'));
+  console.log('[media-handler] downloaded:', encData.length, 'bytes | first4:', encData.slice(0, 4).toString('hex'));
 
   // Strip 10-byte HMAC suffix
   const ciphertext = encData.subarray(0, -10);
-  console.log('[media-handler] ciphertext length:', ciphertext.length, '(must be multiple of 16:', ciphertext.length % 16 === 0, ')');
 
   // Decrypt AES-256-CBC
   const decipher = crypto.createDecipheriv('aes-256-cbc', cipherKey, iv);
