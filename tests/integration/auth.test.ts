@@ -9,7 +9,7 @@ const TEST_USER = {
   email: 'test-auth@postai.com',
   password: 'password123',
   name: 'Test User',
-  cpf: '12345678901',
+  cpf: '52998224725',
   plan: 'CREATOR_STARTER',
 };
 

@@ -206,14 +206,14 @@ describe('GET /oauth/:platform/callback — mocked token exchange', () => {
 
     const res = await request
       .get(`/oauth/instagram/callback?code=test_code&state=${state}`)
-      .set('Authorization', `Bearer ${accessToken}`);
+      .set('Authorization', `Bearer ${accessToken}`)
+      .redirects(0);
 
     fetchSpy.mockRestore();
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.platform).toBe('INSTAGRAM');
-    expect(res.body.accountName).toBe('@mocked_user');
+    // Callback redirects to frontend after saving token
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toContain('connected=INSTAGRAM');
 
     // Verify token was saved in DB
     const saved = await prisma.apiToken.findFirst({
