@@ -264,7 +264,8 @@ async function handleWaitingVideo(
   message: ParsedMessage,
   draft: CampaignDraft,
 ): Promise<void> {
-  if (message.type !== 'video' || !message.mediaUrl) {
+  const isVideoDocument = message.type === 'document' && message.mimeType?.startsWith('video/');
+  if ((message.type !== 'video' && !isVideoDocument) || !message.mediaUrl) {
     await whatsappService.sendText(message.from, MESSAGES.VIDEO_REQUIRED);
     return;
   }
