@@ -290,7 +290,8 @@ async function handleWaitingThumbnail(
 ): Promise<void> {
   let newDraft = { ...draft };
 
-  if (message.type === 'image' && message.mediaUrl) {
+  const isImageDocument = message.type === 'document' && message.mimeType?.startsWith('image/');
+  if ((message.type === 'image' || isImageDocument) && message.mediaUrl) {
     const permanentUrl = await persistMedia(
       message.mediaUrl,
       session.userId,
