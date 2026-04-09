@@ -44,6 +44,21 @@ vi.mock('@/services/notifications/whatsapp-notifier', () => ({
   retryFailedPlatforms: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock prisma — getConnectedPlatforms queries prisma.apiToken directly
+vi.mock('@/lib/prisma', () => ({
+  default: {
+    apiToken: {
+      findMany: vi.fn().mockResolvedValue([
+        { platform: 'INSTAGRAM' },
+        { platform: 'TIKTOK' },
+      ]),
+    },
+    campaign: {
+      findRecentPublished: vi.fn().mockResolvedValue([]),
+    },
+  },
+}));
+
 // Import after mocks
 const { processMessage } = await import('@/services/whatsapp/state-machine/machine');
 const { sessionRepository } = await import('@/repositories/session.repository');
@@ -104,7 +119,7 @@ describe('State Machine', () => {
       expect(sessionRepository.updateStep).toHaveBeenCalledWith(
         'session-1',
         'waiting_copy',
-        {},
+        expect.objectContaining({ platforms: expect.any(Array) }),
       );
       expect(whatsappService.sendText).toHaveBeenCalled();
     });
@@ -116,7 +131,7 @@ describe('State Machine', () => {
       expect(sessionRepository.updateStep).toHaveBeenCalledWith(
         'session-1',
         'waiting_schedule',
-        { isScheduled: true },
+        expect.objectContaining({ isScheduled: true }),
       );
     });
 
@@ -130,14 +145,14 @@ describe('State Machine', () => {
   });
 
   describe('waiting_copy state', () => {
-    it('saves copy and transitions to waiting_video', async () => {
+    it('saves copy and transitions to waiting_media_type', async () => {
       const session = makeSession('waiting_copy');
       await processMessage(session, makeMessage({ text: 'Minha legenda incrível #hashtag' }));
 
       expect(sessionRepository.updateStep).toHaveBeenCalledWith(
         'session-1',
-        'waiting_video',
-        { copy: 'Minha legenda incrível #hashtag' },
+        'waiting_media_type',
+        expect.objectContaining({ copy: 'Minha legenda incrível #hashtag' }),
       );
     });
 
@@ -154,7 +169,7 @@ describe('State Machine', () => {
   });
 
   describe('waiting_video state', () => {
-    it('saves video URL and transitions to waiting_thumbnail', async () => {
+    it('saves video URL and transitions to waiting_cover_photo', async () => {
       const session = makeSession('waiting_video', { copy: 'Minha legenda' });
       await processMessage(session, makeMessage({
         type: 'video',
@@ -163,7 +178,7 @@ describe('State Machine', () => {
 
       expect(sessionRepository.updateStep).toHaveBeenCalledWith(
         'session-1',
-        'waiting_thumbnail',
+        'waiting_cover_photo',
         { copy: 'Minha legenda', videoUrl: 'https://example.com/video.mp4' },
       );
     });
@@ -176,9 +191,9 @@ describe('State Machine', () => {
     });
   });
 
-  describe('waiting_thumbnail state', () => {
+  describe('waiting_cover_photo state', () => {
     it('saves thumbnail and transitions to confirm_publish', async () => {
-      const session = makeSession('waiting_thumbnail', {
+      const session = makeSession('waiting_cover_photo', {
         copy: 'Legenda',
         videoUrl: 'https://example.com/video.mp4',
       });
@@ -190,25 +205,25 @@ describe('State Machine', () => {
       expect(sessionRepository.updateStep).toHaveBeenCalledWith(
         'session-1',
         'confirm_publish',
-        expect.objectContaining({ thumbnailUrl: 'https://example.com/thumb.jpg' }),
+        expect.objectContaining({ coverPhotoUrl: 'https://example.com/thumb.jpg' }),
       );
     });
 
     it('skips thumbnail when user sends text', async () => {
-      const session = makeSession('waiting_thumbnail', { copy: 'Legenda', videoUrl: 'https://x.com/v.mp4' });
+      const session = makeSession('waiting_cover_photo', { copy: 'Legenda', videoUrl: 'https://x.com/v.mp4' });
       await processMessage(session, makeMessage({ type: 'text', text: 'pular' }));
 
       expect(sessionRepository.updateStep).toHaveBeenCalledWith(
         'session-1',
         'confirm_publish',
-        expect.not.objectContaining({ thumbnailUrl: expect.anything() }),
+        expect.not.objectContaining({ coverPhotoUrl: expect.anything() }),
       );
     });
   });
 
-  describe('waiting_thumbnail state — scheduled flow', () => {
+  describe('waiting_cover_photo state — scheduled flow', () => {
     it('transitions to waiting_schedule_date when isScheduled=true', async () => {
-      const session = makeSession('waiting_thumbnail', {
+      const session = makeSession('waiting_cover_photo', {
         copy: 'Legenda', videoUrl: 'https://x.com/v.mp4', isScheduled: true,
       });
       await processMessage(session, makeMessage({ text: 'pular' }));
