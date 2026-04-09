@@ -17,6 +17,9 @@ export interface ParsedMessage {
   // Present when mediaUrl is an encrypted CDN URL — used for local AES decryption
   mediaKey?: string;       // base64-encoded WhatsApp media key
   whatsappMediaType?: 'image' | 'video' | 'audio' | 'document'; // determines HKDF info string
+  // For Evolution API fallback when mediaKey is absent (webhookBase64=true strips it for documents)
+  remoteJid?: string;          // full JID e.g. "5511999@s.whatsapp.net"
+  rawMessageContent?: unknown; // raw message body for getBase64FromMediaMessage
 }
 
 export interface EvolutionWebhookEvent {

@@ -56,50 +56,56 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
     return cdnUrl;
   }
 
+  const remoteJid = data.key.remoteJid;
+
   if (msg.imageMessage) {
     const mediaUrl = resolveMediaUrl(msg.imageMessage.url, msg.imageMessage.mimetype);
+    const mediaKey = mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.imageMessage.mediaKey);
     return {
-      type: 'image', from,
+      type: 'image', from, remoteJid,
       text: msg.imageMessage.caption?.trim(),
       mediaUrl, mimeType: msg.imageMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.imageMessage.mediaKey),
-      whatsappMediaType: 'image',
+      mediaKey, whatsappMediaType: 'image',
+      rawMessageContent: mediaKey ? undefined : msg.imageMessage,
     };
   }
 
   if (msg.videoMessage) {
     const mediaUrl = resolveMediaUrl(msg.videoMessage.url, msg.videoMessage.mimetype);
+    const mediaKey = mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.videoMessage.mediaKey);
     return {
-      type: 'video', from,
+      type: 'video', from, remoteJid,
       text: msg.videoMessage.caption?.trim(),
       mediaUrl, mimeType: msg.videoMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.videoMessage.mediaKey),
-      whatsappMediaType: 'video',
+      mediaKey, whatsappMediaType: 'video',
+      rawMessageContent: mediaKey ? undefined : msg.videoMessage,
     };
   }
 
   if (msg.audioMessage) {
     const mediaUrl = resolveMediaUrl(msg.audioMessage.url, msg.audioMessage.mimetype);
+    const mediaKey = mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.audioMessage.mediaKey);
     return {
-      type: 'audio', from,
+      type: 'audio', from, remoteJid,
       mediaUrl, mimeType: msg.audioMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.audioMessage.mediaKey),
-      whatsappMediaType: 'audio',
+      mediaKey, whatsappMediaType: 'audio',
+      rawMessageContent: mediaKey ? undefined : msg.audioMessage,
     };
   }
 
   if (msg.documentMessage) {
     const mediaUrl = resolveMediaUrl(msg.documentMessage.url, msg.documentMessage.mimetype);
+    const mediaKey = mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.documentMessage.mediaKey);
     return {
-      type: 'document', from,
+      type: 'document', from, remoteJid,
       text: msg.documentMessage.title,
       mediaUrl, mimeType: msg.documentMessage.mimetype,
       messageId, timestamp,
-      mediaKey: mediaUrl?.startsWith('data:') ? undefined : normalizeMediaKey(msg.documentMessage.mediaKey),
-      whatsappMediaType: 'document',
+      mediaKey, whatsappMediaType: 'document',
+      rawMessageContent: mediaKey ? undefined : msg.documentMessage,
     };
   }
 
