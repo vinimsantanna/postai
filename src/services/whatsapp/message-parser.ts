@@ -1,4 +1,4 @@
-import type { EvolutionWebhookEvent, ParsedMessage, MessageType, MessageKey } from '@/domain/types';
+import type { EvolutionWebhookEvent, ParsedMessage, MessageType } from '@/domain/types';
 
 export function parsePhoneNumber(jid: string): string {
   // remoteJid format: "5573988548309@s.whatsapp.net"
@@ -19,7 +19,6 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
   const messageId = data.key.id;
   const timestamp = data.messageTimestamp ?? Math.floor(Date.now() / 1000);
   const msg = data.message;
-  const messageKey: MessageKey = { remoteJid: data.key.remoteJid, fromMe: data.key.fromMe, id: messageId };
 
   if (!msg) return null;
 
@@ -28,8 +27,22 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
     return { type: 'text', from, text: msg.conversation.trim(), messageId, timestamp };
   }
 
-  // rawMessage: full WAMessage structure that the decryption endpoint expects
-  const rawMessage = { key: data.key, message: msg } as Record<string, unknown>;
+  // When webhookBase64=true, base64 is at data.base64 or inside the message object
+  const base64 =
+    data.base64 ??
+    msg.imageMessage?.base64 ??
+    msg.videoMessage?.base64 ??
+    msg.audioMessage?.base64 ??
+    msg.documentMessage?.base64;
+
+  // mediaUrl: prefer base64 data URL (no decryption needed), fall back to CDN URL
+  function mediaUrl(cdnUrl?: string, mimetype?: string): string | undefined {
+    if (base64) {
+      const raw = base64.includes(',') ? base64 : `data:${mimetype ?? 'application/octet-stream'};base64,${base64}`;
+      return raw;
+    }
+    return cdnUrl;
+  }
 
   // Image
   if (msg.imageMessage) {
@@ -37,12 +50,10 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       type: 'image',
       from,
       text: msg.imageMessage.caption?.trim(),
-      mediaUrl: msg.imageMessage.url,
+      mediaUrl: mediaUrl(msg.imageMessage.url, msg.imageMessage.mimetype),
       mimeType: msg.imageMessage.mimetype,
       messageId,
       timestamp,
-      messageKey,
-      rawMessage,
     };
   }
 
@@ -52,12 +63,10 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       type: 'video',
       from,
       text: msg.videoMessage.caption?.trim(),
-      mediaUrl: msg.videoMessage.url,
+      mediaUrl: mediaUrl(msg.videoMessage.url, msg.videoMessage.mimetype),
       mimeType: msg.videoMessage.mimetype,
       messageId,
       timestamp,
-      messageKey,
-      rawMessage,
     };
   }
 
@@ -66,12 +75,10 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
     return {
       type: 'audio',
       from,
-      mediaUrl: msg.audioMessage.url,
+      mediaUrl: mediaUrl(msg.audioMessage.url, msg.audioMessage.mimetype),
       mimeType: msg.audioMessage.mimetype,
       messageId,
       timestamp,
-      messageKey,
-      rawMessage,
     };
   }
 
@@ -81,12 +88,10 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       type: 'document',
       from,
       text: msg.documentMessage.title,
-      mediaUrl: msg.documentMessage.url,
+      mediaUrl: mediaUrl(msg.documentMessage.url, msg.documentMessage.mimetype),
       mimeType: msg.documentMessage.mimetype,
       messageId,
       timestamp,
-      messageKey,
-      rawMessage,
     };
   }
 

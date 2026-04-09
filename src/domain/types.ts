@@ -6,23 +6,14 @@ export type { Plan, UserStatus, Platform, CampaignStatus, SessionStatus } from '
 
 export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'document' | 'button' | 'unknown';
 
-export interface MessageKey {
-  remoteJid: string;
-  fromMe: boolean;
-  id: string;
-}
-
 export interface ParsedMessage {
   type: MessageType;
   from: string;       // normalized phone number
   text?: string;      // text content or button label
-  mediaUrl?: string;  // URL for media messages (may be encrypted)
+  mediaUrl?: string;  // data: URL (base64) or CDN URL
   mimeType?: string;
   messageId: string;
   timestamp: number;
-  // Used to fetch media from Evolution API (avoids encrypted CDN URLs)
-  messageKey?: MessageKey;
-  rawMessage?: Record<string, unknown>;
 }
 
 export interface EvolutionWebhookEvent {
@@ -36,12 +27,15 @@ export interface EvolutionWebhookEvent {
     };
     message?: {
       conversation?: string;
-      imageMessage?: { url?: string; mimetype?: string; caption?: string };
-      videoMessage?: { url?: string; mimetype?: string; caption?: string };
-      audioMessage?: { url?: string; mimetype?: string };
-      documentMessage?: { url?: string; mimetype?: string; title?: string };
+      imageMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string };
+      videoMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string };
+      audioMessage?: { url?: string; mimetype?: string; base64?: string };
+      documentMessage?: { url?: string; mimetype?: string; title?: string; base64?: string };
       buttonsResponseMessage?: { selectedButtonId?: string; selectedDisplayText?: string };
     };
+    // Present when webhookBase64=true — base64-encoded media at data level
+    base64?: string;
+    mediaType?: string;
     messageTimestamp?: number;
     pushName?: string;
   };
