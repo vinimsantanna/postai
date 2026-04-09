@@ -23,8 +23,13 @@ export const webhookController = {
         console.log('[webhook] processing type:', message.type, 'from:', message.from);
         await sessionService.handleIncoming(message);
         console.log('[webhook] done');
-      } catch (err) {
-        console.error('[webhook] Error processing message:', err);
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: unknown; status?: number } };
+        if (axiosErr?.response?.data) {
+          console.error('[webhook] Error processing message — status:', axiosErr.response.status, 'body:', JSON.stringify(axiosErr.response.data));
+        } else {
+          console.error('[webhook] Error processing message:', err);
+        }
       }
     });
   },
