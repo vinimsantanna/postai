@@ -121,13 +121,20 @@ function summarizeError(error: string): string {
       };
       const { message: apiMsg, code, error_subcode: sub } = parsed?.error ?? {};
 
-      // Instagram/Meta error codes: 190 = invalid/expired token, 200 = permission
+      // Instagram/Meta error codes
       if (code === 190) {
         if (sub === 460 || sub === 467) return 'Token expirado — reconecte a conta no Instagram';
-        return `Conta Instagram inválida (código ${code}.${sub ?? 0}) — reconecte a conta`;
+        return `Token Instagram inválido (${code}.${sub ?? 0}) — reconecte a conta`;
       }
-      if (code === 200 || code === 10 || code === 100) {
-        return 'Permissão negada pelo Instagram — reconecte e certifique-se de aceitar todas as permissões';
+      if (code === 200 || code === 10) {
+        return 'Permissão negada — reconecte e aceite todas as permissões';
+      }
+      if (code === 9007 || sub === 2207035 || sub === 2207001) {
+        return 'Proporção da imagem inválida para o feed — use entre 4:5 (retrato) e 1.91:1 (paisagem)';
+      }
+      if (code === 100) {
+        // code 100 = invalid parameter (not necessarily auth) — show the real message
+        if (apiMsg) return apiMsg.length > 100 ? `${apiMsg.slice(0, 97)}...` : apiMsg;
       }
       if (apiMsg) error = apiMsg;
     } catch { /* ignore */ }
@@ -139,7 +146,7 @@ function summarizeError(error: string): string {
   if (lower.includes('permission') || lower.includes('scope')) {
     return 'Permissão negada — reconecte a conta e aceite todas as permissões';
   }
-  if (lower.includes('token') || lower.includes('unauthorized') || lower.includes('oauth') || lower.includes('401')) {
+  if (lower.includes('token') || lower.includes('unauthorized') || lower.includes('401')) {
     return 'Token inválido — reconecte a conta';
   }
   if (lower.includes('quota') || lower.includes('rate limit') || lower.includes('429')) {
