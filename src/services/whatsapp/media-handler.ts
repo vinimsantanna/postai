@@ -15,16 +15,24 @@ export async function persistMedia(
   const contentType = type === 'video' ? 'video/mp4' : 'image/jpeg';
   const path = `${type}s/${userId}/${Date.now()}-${messageId}.${ext}`;
 
-  // Download from Evolution API (may need API key as query param or header)
-  const evolutionKey = process.env.EVOLUTION_API_KEY;
-  const response = await axios.get<Buffer>(evolutionUrl, {
-    responseType: 'arraybuffer',
-    headers: evolutionKey ? { apikey: evolutionKey } : {},
-    timeout: 60_000,
-    maxContentLength: 500 * 1024 * 1024, // 500MB
-  });
+  let buffer: Buffer;
 
-  const buffer = Buffer.from(response.data);
+  if (evolutionUrl.startsWith('data:')) {
+    // base64 data URL — extract raw bytes
+    const base64Data = evolutionUrl.split(',')[1];
+    buffer = Buffer.from(base64Data, 'base64');
+  } else {
+    // Download from Evolution API CDN
+    const evolutionKey = process.env.EVOLUTION_API_KEY;
+    const response = await axios.get<Buffer>(evolutionUrl, {
+      responseType: 'arraybuffer',
+      headers: evolutionKey ? { apikey: evolutionKey } : {},
+      timeout: 120_000,
+      maxContentLength: 500 * 1024 * 1024, // 500MB
+    });
+    buffer = Buffer.from(response.data);
+  }
+
   const publicUrl = await supabaseStorage.upload(path, buffer, contentType);
   return publicUrl;
 }

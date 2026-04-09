@@ -11,8 +11,8 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
   // Ignore messages sent by the bot itself
   if (data.key.fromMe) return null;
 
-  // Only process incoming messages
-  if (event.event !== 'messages.upsert') return null;
+  // Only process incoming messages (Evolution API sends MESSAGES_UPSERT or messages.upsert)
+  if (event.event?.toUpperCase() !== 'MESSAGES_UPSERT') return null;
 
   const from = parsePhoneNumber(data.key.remoteJid);
   const messageId = data.key.id;
@@ -41,11 +41,14 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
 
   // Video
   if (msg.videoMessage) {
+    const videoUrl = msg.videoMessage.url ?? (data as Record<string, unknown>).base64
+      ? `data:${msg.videoMessage.mimetype};base64,${(data as Record<string, unknown>).base64}`
+      : undefined;
     return {
       type: 'video',
       from,
       text: msg.videoMessage.caption?.trim(),
-      mediaUrl: msg.videoMessage.url,
+      mediaUrl: videoUrl,
       mimeType: msg.videoMessage.mimetype,
       messageId,
       timestamp,
