@@ -163,7 +163,8 @@ model Campaign {
   userId       String
   clientId     String?
   originalCopy String
-  videoUrl     String?        // Supabase Storage URL
+  videoUrl     String?        // Supabase Storage URL (vídeo)
+  photoUrl     String?        // Supabase Storage URL (foto)
   thumbnailUrl String?
   platforms    Platform[]
   status       CampaignStatus @default(DRAFT)

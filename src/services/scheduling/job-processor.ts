@@ -41,6 +41,7 @@ async function processScheduledPost(job: Job<ScheduledJobData>): Promise<void> {
     {
       copy: campaign.originalCopy,
       videoUrl: campaign.videoUrl ?? undefined,
+      photoUrl: campaign.photoUrl ?? undefined,
       coverPhotoUrl: campaign.thumbnailUrl ?? undefined,
     },
     clientId,

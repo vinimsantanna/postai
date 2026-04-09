@@ -6,6 +6,7 @@ export interface CreateCampaignInput {
   clientId?: string;
   copy: string;
   videoUrl?: string;
+  photoUrl?: string;
   thumbnailUrl?: string;
   platforms: Platform[];
   scheduledAt?: Date;
@@ -25,6 +26,7 @@ export const campaignRepository = {
         clientId: input.clientId ?? null,
         originalCopy: input.copy,
         videoUrl: input.videoUrl ?? null,
+        photoUrl: input.photoUrl ?? null,
         thumbnailUrl: input.thumbnailUrl ?? null,
         platforms: input.platforms,
         status: 'DRAFT',
