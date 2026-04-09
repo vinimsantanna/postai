@@ -33,6 +33,16 @@ export async function processMessage(
 ): Promise<void> {
   const state = session.currentStep as ConversationState;
   const draft = (session.campaignDraft ?? {}) as CampaignDraft;
+  const isAgency = session.user.plan === 'AGENCY_SYMPHONY';
+
+  // Global escape commands — work in any state
+  const input = (message.text ?? '').trim().toLowerCase();
+  if (state !== 'menu' && (input === 'menu' || input === 'voltar' || input === 'cancelar' || input === 'sair')) {
+    await transitionTo(session, 'menu', null);
+    await whatsappService.sendText(message.from, '↩️ Operação cancelada.');
+    await whatsappService.sendText(message.from, MENU_TEXT(session.user.name, isAgency));
+    return;
+  }
 
   switch (state) {
     case 'menu':
@@ -61,9 +71,6 @@ export async function processMessage(
       break;
     case 'waiting_cover_photo':
       await handleWaitingCoverPhoto(session, message, draft);
-      break;
-    case 'waiting_collab':
-      await handleWaitingCollab(session, message, draft);
       break;
     case 'waiting_schedule':
       await handleWaitingSchedule(session, message, draft);
@@ -386,44 +393,6 @@ async function handleWaitingCoverPhoto(
   }
   // any text (including "pular") = skip cover photo
 
-  // Ask for collaborator (only for video Reels — Instagram only)
-  const hasInstagram = (newDraft.platforms ?? []).includes('INSTAGRAM');
-  const isVideo = newDraft.mediaType === 'video' || !!newDraft.videoUrl;
-  if (hasInstagram && isVideo) {
-    await transitionTo(session, 'waiting_collab', newDraft);
-    await whatsappService.sendText(message.from, MESSAGES.ASK_COLLAB);
-    return;
-  }
-
-  if (newDraft.isScheduled) {
-    await transitionTo(session, 'waiting_schedule_date', newDraft);
-    await whatsappService.sendText(message.from, MESSAGES.ASK_SCHEDULE_DATE);
-  } else {
-    await transitionTo(session, 'confirm_publish', newDraft);
-    await whatsappService.sendText(message.from, confirmMessage(newDraft, session.activeClient?.name));
-  }
-}
-
-async function handleWaitingCollab(
-  session: SessionWithUser,
-  message: ParsedMessage,
-  draft: CampaignDraft,
-): Promise<void> {
-  const input = (message.text ?? '').trim().toLowerCase();
-  let newDraft = { ...draft };
-
-  if (input !== 'não' && input !== 'nao' && input !== 'n' && input !== 'pular') {
-    // Extract usernames — support multiple separated by comma/space
-    const usernames = (message.text ?? '')
-      .split(/[\s,]+/)
-      .map((u) => u.replace(/^@/, '').trim())
-      .filter((u) => u.length > 0);
-
-    if (usernames.length > 0) {
-      newDraft = { ...draft, collaborators: usernames };
-    }
-  }
-
   if (newDraft.isScheduled) {
     await transitionTo(session, 'waiting_schedule_date', newDraft);
     await whatsappService.sendText(message.from, MESSAGES.ASK_SCHEDULE_DATE);
@@ -615,7 +584,6 @@ function confirmMessage(draft: CampaignDraft, clientName?: string): string {
     `📝 *Legenda:* ${draft.copy ?? '—'}`,
     mediaLine,
     coverLine,
-    draft.collaborators?.length ? `🤝 *Collab:* @${draft.collaborators.join(', @')}` : '',
     `📱 *Plataformas:* ${platforms}`,
     draft.scheduledAt ? `⏰ *Agendado para:* ${draft.scheduledAt}` : '',
     '',

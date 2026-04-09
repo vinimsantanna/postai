@@ -61,7 +61,6 @@ export type ConversationState =
   | 'waiting_video'
   | 'waiting_photo'
   | 'waiting_cover_photo'
-  | 'waiting_collab'
   | 'waiting_schedule'
   | 'waiting_schedule_date'
   | 'confirm_schedule'
@@ -74,7 +73,6 @@ export interface CampaignDraft {
   videoUrl?: string;
   photoUrl?: string;
   coverPhotoUrl?: string;
-  collaborators?: string[];
   platforms?: string[];
   scheduledAt?: string;      // ISO string UTC
   isScheduled?: boolean;     // true when coming from option '2'
