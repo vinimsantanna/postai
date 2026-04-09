@@ -45,6 +45,8 @@ export interface EvolutionWebhookEvent {
 export type ConversationState =
   | 'menu'
   | 'select_client'
+  | 'create_client_name'
+  | 'create_client_confirm'
   | 'waiting_copy'
   | 'waiting_video'
   | 'waiting_thumbnail'

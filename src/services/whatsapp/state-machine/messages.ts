@@ -36,8 +36,14 @@ export const MESSAGES = {
     return lines.join('\n');
   },
 
-  NO_CLIENTS:
-    '⚠️ Você ainda não cadastrou clientes. Acesse *postai.app/agency* para adicionar o primeiro.',
+  NO_CLIENTS_ONBOARD:
+    '👥 Você ainda não tem clientes cadastrados.\n\nVamos cadastrar o primeiro agora! Como se chama o cliente?',
+
+  CREATE_CLIENT_CONFIRM: (name: string) =>
+    `✅ Cadastrar cliente *${name}*?\n\nDigite *confirmar* para salvar ou *cancelar* para desistir.`,
+
+  CREATE_CLIENT_SUCCESS: (name: string) =>
+    `✅ Cliente *${name}* cadastrado com sucesso!\n\n⚠️ Lembre-se de conectar as plataformas dele em *postai.app/settings* para poder publicar.`,
 
   CLIENT_SELECTED: (name: string, platforms: string[]) =>
     platforms.length > 0

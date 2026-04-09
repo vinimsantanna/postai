@@ -28,6 +28,12 @@ export async function processMessage(
     case 'select_client':
       await handleSelectClient(session, message, draft);
       break;
+    case 'create_client_name':
+      await handleCreateClientName(session, message, draft);
+      break;
+    case 'create_client_confirm':
+      await handleCreateClientConfirm(session, message, draft);
+      break;
     case 'waiting_copy':
       await handleWaitingCopy(session, message, draft);
       break;
@@ -77,7 +83,7 @@ async function handleMenu(
     await sessionRepository.updateActiveClient(session.id, null);
     await transitionTo(session, 'select_client', null);
     if (clients.length === 0) {
-      await whatsappService.sendText(message.from, MESSAGES.NO_CLIENTS);
+      await whatsappService.sendText(message.from, MESSAGES.NO_CLIENTS_ONBOARD);
       return;
     }
     const clientList = clients.map((c, i) => ({
@@ -169,8 +175,8 @@ async function handleSelectClient(
   const clients = await agencyClientRepository.findByUser(session.userId);
 
   if (clients.length === 0) {
-    await whatsappService.sendText(message.from, MESSAGES.NO_CLIENTS);
-    await transitionTo(session, 'menu', null);
+    await transitionTo(session, 'create_client_name', {});
+    await whatsappService.sendText(message.from, MESSAGES.NO_CLIENTS_ONBOARD);
     return;
   }
 
@@ -194,6 +200,49 @@ async function handleSelectClient(
   const platforms = client.tokens.map((t) => t.platform as string);
   await whatsappService.sendText(message.from, MESSAGES.CLIENT_SELECTED(client.name, platforms));
   await whatsappService.sendText(message.from, MENU_TEXT(session.user.name, true));
+}
+
+async function handleCreateClientName(
+  session: SessionWithUser,
+  message: ParsedMessage,
+  draft: CampaignDraft,
+): Promise<void> {
+  const name = message.text?.trim() ?? '';
+  if (name.length < 2) {
+    await whatsappService.sendText(message.from, '❌ Nome muito curto. Como se chama o cliente?');
+    return;
+  }
+  await transitionTo(session, 'create_client_confirm', { ...draft, copy: name });
+  await whatsappService.sendText(message.from, MESSAGES.CREATE_CLIENT_CONFIRM(name));
+}
+
+async function handleCreateClientConfirm(
+  session: SessionWithUser,
+  message: ParsedMessage,
+  draft: CampaignDraft,
+): Promise<void> {
+  const input = (message.text ?? '').toLowerCase().trim();
+  const name = draft.copy ?? '';
+
+  if (input === 'confirmar' || input === 'sim' || input === 'ok') {
+    await agencyClientRepository.create({ agencyUserId: session.userId, name });
+    await whatsappService.sendText(message.from, MESSAGES.CREATE_CLIENT_SUCCESS(name));
+
+    // Reload clients and go to select
+    const clients = await agencyClientRepository.findByUser(session.userId);
+    const clientList = clients.map((c, i) => ({
+      index: i + 1,
+      name: c.name,
+      platforms: c.tokens.map((t) => t.platform as string),
+    }));
+    await transitionTo(session, 'select_client', {});
+    await whatsappService.sendText(message.from, MESSAGES.SELECT_CLIENT_PROMPT(clientList));
+  } else if (input === 'cancelar' || input === 'não' || input === 'nao') {
+    await transitionTo(session, 'create_client_name', {});
+    await whatsappService.sendText(message.from, MESSAGES.NO_CLIENTS_ONBOARD);
+  } else {
+    await whatsappService.sendText(message.from, MESSAGES.CREATE_CLIENT_CONFIRM(name));
+  }
 }
 
 async function handleWaitingCopy(

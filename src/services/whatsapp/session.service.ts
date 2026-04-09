@@ -63,15 +63,16 @@ async function handleIdentification(phone: string, message: ParsedMessage): Prom
 
   // Agency plan → select client before showing menu
   if (user.plan === 'AGENCY_SYMPHONY') {
-    const session = await sessionRepository.upsertSession(user.id, phone);
-    await sessionRepository.updateStep(session.id, 'select_client', null);
-
     const clients = await agencyClientRepository.findByUser(user.id);
+
     if (clients.length === 0) {
-      await whatsappService.sendText(phone, MESSAGES.NO_CLIENTS);
+      const session = await sessionRepository.upsertSession(user.id, phone);
+      await sessionRepository.updateStep(session.id, 'create_client_name', null);
+      await whatsappService.sendText(phone, MESSAGES.NO_CLIENTS_ONBOARD);
       return;
     }
 
+    await sessionRepository.upsertSession(user.id, phone);
     const clientList = clients.map((c, i) => ({
       index: i + 1,
       name: c.name,
