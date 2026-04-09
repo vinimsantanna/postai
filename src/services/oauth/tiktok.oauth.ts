@@ -1,5 +1,5 @@
-import crypto from 'crypto';
 import { apiTokenRepository } from '@/repositories/api-token.repository';
+import { encodeState, decodeState } from '@/lib/oauth-state';
 
 const PLATFORM = 'TIKTOK' as const;
 
@@ -20,23 +20,11 @@ function getConfig() {
   return { clientKey, clientSecret, redirectUri };
 }
 
-function makeState(userId: string, clientId?: string): string {
-  const payload = { userId, clientId, nonce: crypto.randomBytes(16).toString('hex') };
-  return Buffer.from(JSON.stringify(payload)).toString('base64url');
-}
-
-function parseState(state: string): { userId: string; clientId?: string } {
-  try {
-    return JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
-  } catch {
-    throw Object.assign(new Error('Invalid OAuth state'), { status: 400 });
-  }
-}
 
 export const tiktokOAuth = {
   getAuthUrl(userId: string, clientId?: string): string {
     const { clientKey, redirectUri } = getConfig();
-    const state = makeState(userId, clientId);
+    const state = encodeState({ userId, clientId });
     const params = new URLSearchParams({
       client_key: clientKey,
       redirect_uri: redirectUri,
@@ -47,9 +35,12 @@ export const tiktokOAuth = {
     return `${AUTH_URL}?${params}`;
   },
 
-  async handleCallback(code: string, state: string) {
+  async handleCallback(code: string, state: string, requestingUserId: string) {
     const { clientKey, clientSecret, redirectUri } = getConfig();
-    const { userId, clientId } = parseState(state);
+    const { userId, clientId } = decodeState(state);
+    if (userId !== requestingUserId) {
+      throw Object.assign(new Error('OAuth state userId mismatch'), { status: 403 });
+    }
 
     const body = new URLSearchParams({
       client_key: clientKey,
