@@ -12,11 +12,17 @@ export const webhookController = {
     setImmediate(async () => {
       try {
         const event = req.body as EvolutionWebhookEvent;
+        console.log('[webhook] event:', event.event, 'instance:', event.instance, 'fromMe:', event.data?.key?.fromMe);
         const message = parseMessage(event);
 
-        if (!message) return; // fromMe or unsupported event
+        if (!message) {
+          console.log('[webhook] message filtered out (fromMe or unsupported)');
+          return;
+        }
 
+        console.log('[webhook] processing type:', message.type, 'from:', message.from);
         await sessionService.handleIncoming(message);
+        console.log('[webhook] done');
       } catch (err) {
         console.error('[webhook] Error processing message:', err);
       }
