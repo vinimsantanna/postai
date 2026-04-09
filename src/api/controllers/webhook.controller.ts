@@ -26,7 +26,11 @@ export const webhookController = {
         const msg = rawData.message as Record<string, unknown> | undefined;
         if (msg) {
           const mediaMsg = (msg.documentMessage ?? msg.imageMessage ?? msg.videoMessage) as Record<string, unknown> | undefined;
-          if (mediaMsg) console.log('[webhook] media fields:', Object.keys(mediaMsg));
+          if (mediaMsg) {
+            console.log('[webhook] media fields:', Object.keys(mediaMsg));
+            const mk = mediaMsg.mediaKey;
+            console.log('[webhook] mediaKey type:', typeof mk, '| constructor:', mk != null ? Object.prototype.toString.call(mk) : 'null', '| value:', JSON.stringify(mk)?.slice(0, 120));
+          }
         }
         await sessionService.handleIncoming(message);
         console.log('[webhook] done');
