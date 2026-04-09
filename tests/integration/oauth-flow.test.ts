@@ -3,6 +3,13 @@ import supertest from 'supertest';
 import app from '@/api/app';
 import prisma from '@/lib/prisma';
 
+// Mock billing — Stripe não está disponível no ambiente de testes
+vi.mock('@/services/billing.service', () => ({
+  billingService: {
+    createCheckoutSession: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/test' }),
+  },
+}));
+
 const request = supertest(app);
 
 const TEST_USER = {

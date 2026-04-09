@@ -1,7 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import supertest from 'supertest';
 import app from '@/api/app';
 import prisma from '@/lib/prisma';
+
+// Mock billing — Stripe não está disponível no ambiente de testes
+vi.mock('@/services/billing.service', () => ({
+  billingService: {
+    createCheckoutSession: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/test' }),
+  },
+}));
 
 const request = supertest(app);
 
@@ -12,6 +19,15 @@ const TEST_USER = {
   cpf: '52998224725',
   plan: 'CREATOR_STARTER',
 };
+
+async function registerAndLogin() {
+  await request.post('/auth/register').send(TEST_USER);
+  const res = await request.post('/auth/login').send({
+    email: TEST_USER.email,
+    password: TEST_USER.password,
+  });
+  return res.body as { accessToken: string; refreshToken: string };
+}
 
 beforeAll(async () => {
   await prisma.$connect();
@@ -29,12 +45,11 @@ beforeEach(async () => {
 });
 
 describe('POST /auth/register', () => {
-  it('registers a new user', async () => {
+  it('registers a new user and returns checkoutUrl', async () => {
     const res = await request.post('/auth/register').send(TEST_USER);
     expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('accessToken');
-    expect(res.body).toHaveProperty('refreshToken');
-    expect(res.body.user.email).toBe(TEST_USER.email);
+    expect(res.body).toHaveProperty('checkoutUrl');
+    expect(res.body).toHaveProperty('userId');
   });
 
   it('returns 409 for duplicate email', async () => {
@@ -88,13 +103,11 @@ describe('POST /auth/login', () => {
 
 describe('POST /auth/refresh', () => {
   it('issues new tokens with valid refresh token', async () => {
-    const { body: registered } = await request.post('/auth/register').send(TEST_USER);
-    const res = await request.post('/auth/refresh').send({
-      refreshToken: registered.refreshToken,
-    });
+    const { refreshToken } = await registerAndLogin();
+    const res = await request.post('/auth/refresh').send({ refreshToken });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
-    expect(res.body.refreshToken).not.toBe(registered.refreshToken); // rotated
+    expect(res.body.refreshToken).not.toBe(refreshToken); // rotated
   });
 
   it('returns 401 for invalid refresh token', async () => {
@@ -103,21 +116,21 @@ describe('POST /auth/refresh', () => {
   });
 
   it('returns 401 when reusing rotated refresh token', async () => {
-    const { body: registered } = await request.post('/auth/register').send(TEST_USER);
-    await request.post('/auth/refresh').send({ refreshToken: registered.refreshToken });
-    const res = await request.post('/auth/refresh').send({ refreshToken: registered.refreshToken });
+    const { refreshToken } = await registerAndLogin();
+    await request.post('/auth/refresh').send({ refreshToken });
+    const res = await request.post('/auth/refresh').send({ refreshToken });
     expect(res.status).toBe(401);
   });
 });
 
 describe('POST /auth/logout', () => {
   it('revokes refresh token and returns 204', async () => {
-    const { body: registered } = await request.post('/auth/register').send(TEST_USER);
-    const res = await request.post('/auth/logout').send({ refreshToken: registered.refreshToken });
+    const { refreshToken } = await registerAndLogin();
+    const res = await request.post('/auth/logout').send({ refreshToken });
     expect(res.status).toBe(204);
 
     // Refresh should fail after logout
-    const refresh = await request.post('/auth/refresh').send({ refreshToken: registered.refreshToken });
+    const refresh = await request.post('/auth/refresh').send({ refreshToken });
     expect(refresh.status).toBe(401);
   });
 });
