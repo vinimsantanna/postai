@@ -23,10 +23,7 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
     return { type: 'text', from, text: msg.conversation.trim(), messageId, timestamp };
   }
 
-  // Full WAMessage for decryption fallback (when base64 not in webhook)
-  const rawMessage = { key: data.key, message: msg } as Record<string, unknown>;
-
-  // When webhookBase64=true, base64 may be at data level or inside message fields
+  // base64 inline from webhookBase64=true (preferred — no decryption needed)
   const inlineBase64 =
     data.base64 ??
     msg.imageMessage?.base64 ??
@@ -50,7 +47,8 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       text: msg.imageMessage.caption?.trim(),
       mediaUrl, mimeType: msg.imageMessage.mimetype,
       messageId, timestamp,
-      rawMessage: mediaUrl?.startsWith('data:') ? undefined : rawMessage,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.imageMessage.mediaKey,
+      whatsappMediaType: 'image',
     };
   }
 
@@ -61,7 +59,8 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       text: msg.videoMessage.caption?.trim(),
       mediaUrl, mimeType: msg.videoMessage.mimetype,
       messageId, timestamp,
-      rawMessage: mediaUrl?.startsWith('data:') ? undefined : rawMessage,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.videoMessage.mediaKey,
+      whatsappMediaType: 'video',
     };
   }
 
@@ -71,7 +70,8 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       type: 'audio', from,
       mediaUrl, mimeType: msg.audioMessage.mimetype,
       messageId, timestamp,
-      rawMessage: mediaUrl?.startsWith('data:') ? undefined : rawMessage,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.audioMessage.mediaKey,
+      whatsappMediaType: 'audio',
     };
   }
 
@@ -82,7 +82,8 @@ export function parseMessage(event: EvolutionWebhookEvent): ParsedMessage | null
       text: msg.documentMessage.title,
       mediaUrl, mimeType: msg.documentMessage.mimetype,
       messageId, timestamp,
-      rawMessage: mediaUrl?.startsWith('data:') ? undefined : rawMessage,
+      mediaKey: mediaUrl?.startsWith('data:') ? undefined : msg.documentMessage.mediaKey,
+      whatsappMediaType: 'document',
     };
   }
 

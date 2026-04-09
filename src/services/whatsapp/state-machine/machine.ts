@@ -350,7 +350,8 @@ async function handleWaitingVideo(
     session.userId,
     'video',
     message.messageId,
-    message.rawMessage,
+    message.mediaKey,
+    message.whatsappMediaType,
   );
   const newDraft = { ...draft, videoUrl: permanentUrl };
   await transitionTo(session, 'waiting_cover_photo', newDraft);
@@ -372,7 +373,8 @@ async function handleWaitingPhoto(
     session.userId,
     'image',
     message.messageId,
-    message.rawMessage,
+    message.mediaKey,
+    message.whatsappMediaType,
   );
   const newDraft = { ...draft, photoUrl: permanentUrl };
 
@@ -399,7 +401,8 @@ async function handleWaitingCoverPhoto(
       session.userId,
       'image',
       message.messageId,
-      message.rawMessage,
+      message.mediaKey,
+      message.whatsappMediaType,
     );
     newDraft = { ...draft, coverPhotoUrl: permanentUrl };
   }

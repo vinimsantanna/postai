@@ -14,8 +14,9 @@ export interface ParsedMessage {
   mimeType?: string;
   messageId: string;
   timestamp: number;
-  // Full WAMessage passed to Evolution API decryption endpoint when mediaUrl is CDN URL
-  rawMessage?: Record<string, unknown>;
+  // Present when mediaUrl is an encrypted CDN URL — used for local AES decryption
+  mediaKey?: string;       // base64-encoded WhatsApp media key
+  whatsappMediaType?: 'image' | 'video' | 'audio' | 'document'; // determines HKDF info string
 }
 
 export interface EvolutionWebhookEvent {
@@ -29,10 +30,10 @@ export interface EvolutionWebhookEvent {
     };
     message?: {
       conversation?: string;
-      imageMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string };
-      videoMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string };
-      audioMessage?: { url?: string; mimetype?: string; base64?: string };
-      documentMessage?: { url?: string; mimetype?: string; title?: string; base64?: string };
+      imageMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string; mediaKey?: string };
+      videoMessage?: { url?: string; mimetype?: string; caption?: string; base64?: string; mediaKey?: string };
+      audioMessage?: { url?: string; mimetype?: string; base64?: string; mediaKey?: string };
+      documentMessage?: { url?: string; mimetype?: string; title?: string; base64?: string; mediaKey?: string };
       buttonsResponseMessage?: { selectedButtonId?: string; selectedDisplayText?: string };
     };
     // Present when webhookBase64=true — base64-encoded media at data level
