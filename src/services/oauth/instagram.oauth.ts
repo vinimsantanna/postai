@@ -41,12 +41,9 @@ export const instagramOAuth = {
     return `${AUTH_URL}?${params}`;
   },
 
-  async handleCallback(code: string, state: string, requestingUserId: string) {
+  async handleCallback(code: string, state: string) {
     const { appId, appSecret, redirectUri } = getConfig();
     const { userId, clientId } = decodeState(state);
-    if (userId !== requestingUserId) {
-      throw Object.assign(new Error('OAuth state userId mismatch'), { status: 403 });
-    }
 
     // Step 1: Exchange code for short-lived token
     const tokenBody = new URLSearchParams({

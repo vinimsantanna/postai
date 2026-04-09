@@ -35,12 +35,9 @@ export const tiktokOAuth = {
     return `${AUTH_URL}?${params}`;
   },
 
-  async handleCallback(code: string, state: string, requestingUserId: string) {
+  async handleCallback(code: string, state: string) {
     const { clientKey, clientSecret, redirectUri } = getConfig();
     const { userId, clientId } = decodeState(state);
-    if (userId !== requestingUserId) {
-      throw Object.assign(new Error('OAuth state userId mismatch'), { status: 403 });
-    }
 
     const body = new URLSearchParams({
       client_key: clientKey,
