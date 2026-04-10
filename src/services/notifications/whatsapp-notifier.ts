@@ -69,8 +69,7 @@ export async function retryFailedPlatforms(
     platforms: failedPlatforms,
   };
 
-  // Re-publish only failed platforms — temporarily override apiTokenRepository
-  // by filtering tokens to only failed platforms
+  // Re-publish only failed platforms
   const retryResults = await publishToAllPlatforms(
     userId,
     {
@@ -80,7 +79,8 @@ export async function retryFailedPlatforms(
       coverPhotoUrl: draft.coverPhotoUrl,
     },
     clientId,
-  ).then((results) => results.filter((r) => failedPlatforms.includes(r.platform)));
+    failedPlatforms,
+  );
 
   // Merge with previous results
   const mergedResults: Record<string, { success: boolean; postUrl?: string; error?: string }> = {
