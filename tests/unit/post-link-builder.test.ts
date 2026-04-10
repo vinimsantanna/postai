@@ -47,7 +47,7 @@ describe('formatPlatformLine', () => {
   it('formats failure line with token error', () => {
     const line = formatPlatformLine('LINKEDIN', false, undefined, '401 unauthorized token');
     expect(line).toContain('❌');
-    expect(line).toContain('Token expirado');
+    expect(line).toContain('Token inválido');
   });
 
   it('formats failure line with rate limit error', () => {
