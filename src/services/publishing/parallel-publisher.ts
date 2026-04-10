@@ -49,9 +49,11 @@ export async function publishToAllPlatforms(
   if (tokens.length === 0) return [];
 
   // Filter to only selected platforms if provided
+  console.log('[parallel-publisher] tokens before filter:', tokens.map((t) => t.platform), '| platforms filter:', platforms);
   if (platforms && platforms.length > 0) {
     tokens = tokens.filter((t) => platforms.includes(t.platform));
   }
+  console.log('[parallel-publisher] tokens after filter:', tokens.map((t) => t.platform));
 
   if (tokens.length === 0) return [];
 

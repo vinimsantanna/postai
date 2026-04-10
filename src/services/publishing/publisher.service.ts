@@ -19,6 +19,7 @@ export async function runPublish(
   clientId?: string,
 ): Promise<void> {
   const platforms = (draft.platforms ?? ['INSTAGRAM', 'TIKTOK', 'LINKEDIN', 'YOUTUBE']) as Platform[];
+  console.log('[publisher] draft.platforms:', draft.platforms, '→ resolved:', platforms);
 
   const campaign = await campaignRepository.create({
     userId,
