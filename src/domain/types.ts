@@ -54,6 +54,7 @@ export type ConversationState =
   | 'create_client_name'
   | 'create_client_confirm'
   | 'waiting_copy'
+  | 'waiting_platform_select'
   | 'waiting_media_type'
   | 'waiting_video'
   | 'waiting_photo'

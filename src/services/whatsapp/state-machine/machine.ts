@@ -60,6 +60,9 @@ export async function processMessage(
     case 'waiting_copy':
       await handleWaitingCopy(session, message, draft);
       break;
+    case 'waiting_platform_select':
+      await handleWaitingPlatformSelect(session, message, draft);
+      break;
     case 'waiting_media_type':
       await handleWaitingMediaType(session, message, draft);
       break;
@@ -310,6 +313,47 @@ async function handleWaitingCopy(
     return;
   }
   const newDraft = { ...draft, copy: message.text };
+
+  // If only one platform connected, skip selection and go straight to media
+  const connectedPlatforms = draft.platforms ?? [];
+  if (connectedPlatforms.length <= 1) {
+    await transitionTo(session, 'waiting_media_type', newDraft);
+    await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
+    return;
+  }
+
+  await transitionTo(session, 'waiting_platform_select', newDraft);
+  await whatsappService.sendText(message.from, MESSAGES.ASK_PLATFORM_SELECT(connectedPlatforms));
+}
+
+async function handleWaitingPlatformSelect(
+  session: SessionWithUser,
+  message: ParsedMessage,
+  draft: CampaignDraft,
+): Promise<void> {
+  const input = (message.text ?? '').trim().toLowerCase();
+  const connectedPlatforms = draft.platforms ?? [];
+
+  let selectedPlatforms: string[];
+
+  if (input === 'todas' || input === 'all') {
+    selectedPlatforms = connectedPlatforms;
+  } else {
+    const indices = input
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10) - 1)
+      .filter((i) => !isNaN(i) && i >= 0 && i < connectedPlatforms.length);
+
+    if (indices.length === 0) {
+      await whatsappService.sendText(message.from, MESSAGES.PLATFORM_SELECT_INVALID);
+      await whatsappService.sendText(message.from, MESSAGES.ASK_PLATFORM_SELECT(connectedPlatforms));
+      return;
+    }
+
+    selectedPlatforms = [...new Set(indices.map((i) => connectedPlatforms[i]))];
+  }
+
+  const newDraft = { ...draft, platforms: selectedPlatforms };
   await transitionTo(session, 'waiting_media_type', newDraft);
   await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
 }
@@ -426,8 +470,16 @@ async function handleWaitingSchedule(
     return;
   }
   const newDraft = { ...draft, copy: message.text };
-  await transitionTo(session, 'waiting_media_type', newDraft);
-  await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
+
+  const connectedPlatforms = draft.platforms ?? [];
+  if (connectedPlatforms.length <= 1) {
+    await transitionTo(session, 'waiting_media_type', newDraft);
+    await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
+    return;
+  }
+
+  await transitionTo(session, 'waiting_platform_select', newDraft);
+  await whatsappService.sendText(message.from, MESSAGES.ASK_PLATFORM_SELECT(connectedPlatforms));
 }
 
 async function handleWaitingScheduleDate(

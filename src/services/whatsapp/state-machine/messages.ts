@@ -6,6 +6,15 @@ export const MESSAGES = {
 
   ASK_SCHEDULED_COPY: '⏰ Vamos agendar! Me manda a *legenda* do post:',
 
+  ASK_PLATFORM_SELECT: (platforms: string[]) => {
+    const lines = ['📱 *Em quais plataformas deseja publicar?*', ''];
+    platforms.forEach((p, i) => lines.push(`${i + 1}. ${p}`));
+    lines.push('', 'Digite os números separados por vírgula (ex: *1,2*) ou *todas*:');
+    return lines.join('\n');
+  },
+
+  PLATFORM_SELECT_INVALID: '❌ Seleção inválida. Digite os números das plataformas ou *todas*:',
+
   ASK_MEDIA_TYPE:
     '📸 O que você quer publicar?\n\n1️⃣ Vídeo\n2️⃣ Foto\n\nDigite *1* ou *2*:',
 
