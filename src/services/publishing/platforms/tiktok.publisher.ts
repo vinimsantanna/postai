@@ -52,6 +52,7 @@ export async function publishToTikTok(
     body: JSON.stringify(initBody),
   });
 
+  console.log('[tiktok] init body sent:', JSON.stringify(initBody));
   const initRaw = await initRes.text();
   console.log('[tiktok] init response:', initRaw);
   if (!initRes.ok) throw new Error(`TikTok init failed: ${initRaw}`);
