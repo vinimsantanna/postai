@@ -48,6 +48,9 @@ export function formatPlatformLine(
   const emoji = PLATFORM_EMOJI[platform];
   const name = PLATFORM_NAME[platform];
 
+  if (success && postUrl === 'tiktok://draft') {
+    return `${emoji} *${name}:* ✅ Enviado como rascunho — abra o TikTok para publicar`;
+  }
   if (success && postUrl) {
     return `${emoji} *${name}:* ✅ ${postUrl}`;
   }

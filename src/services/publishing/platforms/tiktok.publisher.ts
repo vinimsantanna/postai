@@ -1,7 +1,8 @@
 /**
- * TikTok Content Posting API — video publishing via FILE_UPLOAD.
- * PULL_FROM_URL requires domain verification; FILE_UPLOAD does not.
- * Docs: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+ * TikTok Content Posting API — video publishing via FILE_UPLOAD to Inbox (draft).
+ * Direct Post requer auditoria do app. Inbox/draft não requer.
+ * Após auditoria: trocar para /v2/post/publish/video/init/ com privacy_level PUBLIC_TO_EVERYONE.
+ * Docs: https://developers.tiktok.com/doc/content-posting-api-reference-inbox-post
  */
 
 const BASE = 'https://open.tiktokapis.com/v2';
@@ -13,7 +14,7 @@ export interface TikTokPublishResult {
 
 export async function publishToTikTok(
   accessToken: string,
-  copy: string,
+  _copy: string,
   videoUrl: string,
   _thumbnailUrl?: string,
 ): Promise<TikTokPublishResult> {
@@ -23,10 +24,10 @@ export async function publishToTikTok(
   const videoBuffer = await videoRes.arrayBuffer();
   const videoSize = videoBuffer.byteLength;
 
-  // Step 2: Init upload on TikTok via "Upload to Inbox" (rascunho).
-  // Direct Post requer auditoria do app. Inbox não requer e funciona para apps não auditados.
-  // O vídeo chega como rascunho na conta TikTok e o usuário publica manualmente.
-  const initBody: Record<string, unknown> = {
+  console.log(`[tiktok] video downloaded: ${videoSize} bytes`);
+
+  // Step 2: Init inbox upload (rascunho — sem auditoria necessária)
+  const initBody = {
     source_info: {
       source: 'FILE_UPLOAD',
       video_size: videoSize,
@@ -44,7 +45,6 @@ export async function publishToTikTok(
     body: JSON.stringify(initBody),
   });
 
-  console.log('[tiktok] init body sent:', JSON.stringify(initBody));
   const initRaw = await initRes.text();
   console.log('[tiktok] init response:', initRaw);
   if (!initRes.ok) throw new Error(`TikTok init failed: ${initRaw}`);
@@ -63,7 +63,7 @@ export async function publishToTikTok(
 
   if (!uploadUrl) throw new Error('TikTok did not return upload_url');
 
-  // Step 3: Upload video in a single chunk
+  // Step 3: Upload video em chunk único
   const uploadRes = await fetch(uploadUrl, {
     method: 'PUT',
     headers: {
@@ -74,18 +74,10 @@ export async function publishToTikTok(
     body: videoBuffer,
   });
 
-  if (!uploadRes.ok) throw new Error(`TikTok upload failed: ${await uploadRes.text()}`);
+  const uploadStatus = uploadRes.status;
+  console.log(`[tiktok] upload status: ${uploadStatus}`);
+  if (!uploadRes.ok) throw new Error(`TikTok upload failed (${uploadStatus}): ${await uploadRes.text()}`);
 
-  // Build post URL from user profile
-  const userRes = await fetch(`${BASE}/user/info/?fields=display_name`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  let postUrl = 'https://www.tiktok.com';
-  if (userRes.ok) {
-    const user = (await userRes.json()) as { data?: { user?: { display_name?: string } } };
-    const handle = user.data?.user?.display_name;
-    if (handle) postUrl = `https://www.tiktok.com/@${handle}`;
-  }
-
-  return { publishId, postUrl };
+  // Rascunho: retornar URL dos rascunhos do TikTok
+  return { publishId, postUrl: 'tiktok://draft' };
 }
