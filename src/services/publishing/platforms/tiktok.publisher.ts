@@ -15,7 +15,7 @@ export async function publishToTikTok(
   accessToken: string,
   copy: string,
   videoUrl: string,
-  thumbnailUrl?: string,
+  _thumbnailUrl?: string,
 ): Promise<TikTokPublishResult> {
   // Step 1: Download video from Supabase
   const videoRes = await fetch(videoUrl);
@@ -23,18 +23,10 @@ export async function publishToTikTok(
   const videoBuffer = await videoRes.arrayBuffer();
   const videoSize = videoBuffer.byteLength;
 
-  // Step 2: Init upload on TikTok (FILE_UPLOAD — no domain verification required)
+  // Step 2: Init upload on TikTok via "Upload to Inbox" (rascunho).
+  // Direct Post requer auditoria do app. Inbox não requer e funciona para apps não auditados.
+  // O vídeo chega como rascunho na conta TikTok e o usuário publica manualmente.
   const initBody: Record<string, unknown> = {
-    post_info: {
-      title: copy.slice(0, 2200),
-      // TikTok apps não auditados só podem postar privado.
-      // Após aprovação do app, alterar para 'PUBLIC_TO_EVERYONE'.
-      privacy_level: 'SELF_ONLY',
-      disable_comment: false,
-      disable_duet: false,
-      disable_stitch: false,
-      ...(thumbnailUrl && { cover_url: thumbnailUrl }),
-    },
     source_info: {
       source: 'FILE_UPLOAD',
       video_size: videoSize,
@@ -43,7 +35,7 @@ export async function publishToTikTok(
     },
   };
 
-  const initRes = await fetch(`${BASE}/post/publish/video/init/`, {
+  const initRes = await fetch(`${BASE}/post/publish/inbox/video/init/`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
