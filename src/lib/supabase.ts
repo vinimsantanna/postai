@@ -73,13 +73,8 @@ export const supabaseStorage = {
       return uploadToCloudinary(data, folder, filename, 'video');
     }
 
-    // Use Cloudinary for images when configured and video cloudinary is set
-    if (!isVideo && getCloudinaryConfig()) {
-      const parts = path.split('/');
-      const filename = parts.pop()!.replace(/\.\w+$/, '');
-      const folder = parts.join('/');
-      return uploadToCloudinary(data, folder, filename, 'image');
-    }
+    // Images always go to Supabase (already cropped by sharp, well within 50 MB limit).
+    // Only videos use Cloudinary (to bypass Supabase's 50 MB restriction).
 
     // Default: Supabase Storage
     const { url, key } = getSupabaseConfig();

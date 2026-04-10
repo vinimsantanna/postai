@@ -116,17 +116,23 @@ async function cropToInstagramRatio(buffer: Buffer): Promise<Buffer> {
   // Apply EXIF auto-rotation first so width/height reflect true visual dimensions.
   // Phone portraits are stored as landscape bytes + EXIF rotate flag — without this
   // step the ratio check uses raw (pre-rotation) dimensions and skips the crop.
-  const rotated = await sharp(buffer).rotate().toBuffer();
+  const rotated = await sharp(buffer).rotate().jpeg({ quality: 92 }).toBuffer();
 
   const meta = await sharp(rotated).metadata();
   const { width = 0, height = 0 } = meta;
+
+  console.log(`[media] EXIF-rotated image: ${width}x${height}, ratio=${width && height ? (width / height).toFixed(3) : 'unknown'}`);
+
   if (!width || !height) return rotated;
 
   const ratio = width / height;
   const MIN_RATIO = 4 / 5;  // 0.8  — max portrait
   const MAX_RATIO = 1.91;   // max landscape
 
-  if (ratio >= MIN_RATIO && ratio <= MAX_RATIO) return rotated; // already valid
+  if (ratio >= MIN_RATIO && ratio <= MAX_RATIO) {
+    console.log(`[media] ratio ${ratio.toFixed(3)} already valid — no crop needed`);
+    return rotated;
+  }
 
   let newWidth: number;
   let newHeight: number;
@@ -140,6 +146,8 @@ async function cropToInstagramRatio(buffer: Buffer): Promise<Buffer> {
     newWidth = Math.round(height * MAX_RATIO);
     newHeight = height;
   }
+
+  console.log(`[media] cropping to ${newWidth}x${newHeight} (ratio ${(newWidth / newHeight).toFixed(3)})`);
 
   return sharp(rotated)
     .resize(newWidth, newHeight, { fit: 'cover', position: 'centre' })

@@ -134,7 +134,7 @@ async function publishPhoto(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      image_url: toInstagramAspectRatio(photoUrl),
+      image_url: photoUrl,
       caption: copy,
       access_token: accessToken,
     }),
