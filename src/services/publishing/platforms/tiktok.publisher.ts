@@ -50,15 +50,17 @@ export async function publishToTikTok(
     body: JSON.stringify(initBody),
   });
 
-  if (!initRes.ok) throw new Error(`TikTok init failed: ${await initRes.text()}`);
+  const initRaw = await initRes.text();
+  console.log('[tiktok] init response:', initRaw);
+  if (!initRes.ok) throw new Error(`TikTok init failed: ${initRaw}`);
 
-  const initData = (await initRes.json()) as {
+  const initData = JSON.parse(initRaw) as {
     data?: { upload_url?: string; publish_id?: string };
     error?: { message?: string; code?: string };
   };
 
   if (initData.error?.code && initData.error.code !== 'ok') {
-    throw new Error(`TikTok init error: ${initData.error.message}`);
+    throw new Error(`TikTok init error [${initData.error.code}]: ${initData.error.message}`);
   }
 
   const uploadUrl = initData.data?.upload_url;
