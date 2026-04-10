@@ -146,6 +146,17 @@ function summarizeError(error: string): string {
     } catch { /* ignore */ }
   }
 
+  // TikTok-specific error codes
+  if (lower.includes('spam_risk_too_many_pending_share')) {
+    return 'Muitos rascunhos pendentes no TikTok — abra o app e publique ou delete os rascunhos';
+  }
+  if (lower.includes('spam_risk') || lower.includes('spamrisk')) {
+    return 'TikTok detectou atividade suspeita — aguarde alguns minutos e tente novamente';
+  }
+  if (lower.includes('privacy_level_not_allowed') || lower.includes('unaudited_client_can_only_post')) {
+    return 'App TikTok não auditado — vídeo enviado como rascunho';
+  }
+
   if (lower.includes('not a business') || lower.includes('not business') || lower.includes('creator')) {
     return 'A conta Instagram precisa ser do tipo Business ou Creator';
   }
