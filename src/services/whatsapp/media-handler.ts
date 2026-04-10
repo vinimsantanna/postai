@@ -118,15 +118,23 @@ async function cropToInstagramRatio(buffer: Buffer): Promise<Buffer> {
   if (!width || !height) return buffer;
 
   const ratio = width / height;
-  const MIN_RATIO = 4 / 5;   // 0.8  — max portrait
-  const MAX_RATIO = 1.91;    // landscape
+  const MIN_RATIO = 4 / 5;  // 0.8  — max portrait
+  const MAX_RATIO = 1.91;   // max landscape
 
   if (ratio >= MIN_RATIO && ratio <= MAX_RATIO) return buffer; // already valid
 
-  // Target: 4:5 for portrait images, 1.91:1 for landscape
-  const targetRatio = ratio < MIN_RATIO ? MIN_RATIO : MAX_RATIO;
-  const newWidth = ratio < MIN_RATIO ? Math.round(height * targetRatio) : width;
-  const newHeight = ratio < MIN_RATIO ? height : Math.round(width / targetRatio);
+  let newWidth: number;
+  let newHeight: number;
+
+  if (ratio < MIN_RATIO) {
+    // Too tall (e.g. 9:16) → keep width, crop height to 4:5
+    newWidth = width;
+    newHeight = Math.round(width / MIN_RATIO);
+  } else {
+    // Too wide (e.g. 16:9) → keep height, crop width to 1.91:1
+    newWidth = Math.round(height * MAX_RATIO);
+    newHeight = height;
+  }
 
   return sharp(buffer)
     .resize(newWidth, newHeight, { fit: 'cover', position: 'centre' })
