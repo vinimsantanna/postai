@@ -36,7 +36,7 @@ export async function processMessage(
   const isAgency = session.user.plan === 'AGENCY_SYMPHONY';
 
   // Global escape commands — work in any state
-  const input = (message.text ?? '').trim().toLowerCase();
+  const input = (message.text ?? '').trim().toLowerCase().replace(/^`+|`+$/g, '');
   if (state !== 'menu' && (input === 'menu' || input === 'voltar' || input === 'cancelar' || input === 'sair')) {
     await transitionTo(session, 'menu', null);
     await whatsappService.sendText(message.from, '↩️ Operação cancelada.');
@@ -149,9 +149,15 @@ async function handleMenu(
 
   // "retentar" command — re-publish only failed platforms from last campaign
   if (input === 'retentar' || input === 'retry') {
-    const lastCampaignId = draft.lastCampaignId;
+    let lastCampaignId = draft.lastCampaignId;
+    // Fallback: busca a campanha mais recente com falha no banco
     if (!lastCampaignId) {
-      await whatsappService.sendText(message.from, '❌ Nenhuma publicação recente encontrada para retentar.');
+      const recent = await campaignRepository.findRecentPublished(session.userId);
+      const failed = recent.find((c) => c.status === 'PARTIAL_FAILURE' || c.status === 'FAILED');
+      lastCampaignId = failed?.id;
+    }
+    if (!lastCampaignId) {
+      await whatsappService.sendText(message.from, '❌ Nenhuma publicação com falha encontrada para retentar.');
       return;
     }
     await retryFailedPlatforms(
