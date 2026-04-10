@@ -65,8 +65,15 @@ export const tiktokOAuth = {
         expires_in: number;
         refresh_expires_in: number;
         open_id: string;
-      };
+      } | null;
+      error?: string;
+      error_description?: string;
     };
+
+    if (!data.data?.access_token) {
+      const reason = data.error_description || data.error || JSON.stringify(data);
+      throw Object.assign(new Error(`TikTok token exchange failed: ${reason}`), { status: 502 });
+    }
 
     const { access_token, refresh_token, expires_in, open_id } = data.data;
 
@@ -116,7 +123,15 @@ export const tiktokOAuth = {
       throw Object.assign(new Error(`TikTok refresh failed: ${err}`), { status: 502 });
     }
 
-    const data = (await res.json()) as { data: { access_token: string; expires_in: number } };
+    const data = (await res.json()) as {
+      data: { access_token: string; expires_in: number } | null;
+      error?: string;
+      error_description?: string;
+    };
+    if (!data.data?.access_token) {
+      const reason = data.error_description || data.error || JSON.stringify(data);
+      throw Object.assign(new Error(`TikTok refresh failed: ${reason}`), { status: 502 });
+    }
     const { access_token, expires_in } = data.data;
     const expiresAt = new Date(Date.now() + expires_in * 1000);
     await apiTokenRepository.updateAccessToken(token.id, access_token, expiresAt);
