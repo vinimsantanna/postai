@@ -130,6 +130,7 @@ async function publishPhoto(
   copy: string,
   photoUrl: string,
 ): Promise<InstagramPublishResult> {
+  console.log(`[instagram] publishPhoto url=${photoUrl}`);
   const containerRes = await fetch(`${BASE}/${igUserId}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -139,7 +140,11 @@ async function publishPhoto(
       access_token: accessToken,
     }),
   });
-  if (!containerRes.ok) throw new Error(`Instagram photo container failed: ${await containerRes.text()}`);
+  if (!containerRes.ok) {
+    const body = await containerRes.text();
+    console.error(`[instagram] publishPhoto container error: ${body}`);
+    throw new Error(`Instagram photo container failed: ${body}`);
+  }
   const { id: containerId } = (await containerRes.json()) as { id: string };
 
   const publishRes = await fetch(`${BASE}/${igUserId}/media_publish`, {
