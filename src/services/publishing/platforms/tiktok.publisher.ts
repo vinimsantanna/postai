@@ -1,5 +1,6 @@
 /**
- * TikTok Content Posting API — video publishing via PULL_FROM_URL.
+ * TikTok Content Posting API — video publishing via FILE_UPLOAD.
+ * PULL_FROM_URL requires domain verification; FILE_UPLOAD does not.
  * Docs: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
  */
 
@@ -16,43 +17,69 @@ export async function publishToTikTok(
   videoUrl: string,
   thumbnailUrl?: string,
 ): Promise<TikTokPublishResult> {
-  const body: Record<string, unknown> = {
+  // Step 1: Download video from Supabase
+  const videoRes = await fetch(videoUrl);
+  if (!videoRes.ok) throw new Error(`Failed to fetch video: ${videoRes.status}`);
+  const videoBuffer = await videoRes.arrayBuffer();
+  const videoSize = videoBuffer.byteLength;
+
+  // Step 2: Init upload on TikTok (FILE_UPLOAD — no domain verification required)
+  const initBody: Record<string, unknown> = {
     post_info: {
-      title: copy.slice(0, 2200), // TikTok max title length
+      title: copy.slice(0, 2200),
       privacy_level: 'PUBLIC_TO_EVERYONE',
       disable_comment: false,
       disable_duet: false,
       disable_stitch: false,
     },
     source_info: {
-      source: 'PULL_FROM_URL',
-      video_url: videoUrl,
-      ...(thumbnailUrl && { cover_url: thumbnailUrl }),
+      source: 'FILE_UPLOAD',
+      video_size: videoSize,
+      chunk_size: videoSize,
+      total_chunk_count: 1,
     },
   };
 
-  const res = await fetch(`${BASE}/post/publish/video/init/`, {
+  const initRes = await fetch(`${BASE}/post/publish/video/init/`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json; charset=UTF-8',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(initBody),
   });
 
-  if (!res.ok) throw new Error(`TikTok publish failed: ${await res.text()}`);
+  if (!initRes.ok) throw new Error(`TikTok init failed: ${await initRes.text()}`);
 
-  const data = (await res.json()) as {
-    data?: { publish_id?: string };
-    error?: { message?: string };
+  const initData = (await initRes.json()) as {
+    data?: { upload_url?: string; publish_id?: string };
+    error?: { message?: string; code?: string };
   };
 
-  if (data.error?.message) throw new Error(`TikTok error: ${data.error.message}`);
+  if (initData.error?.code && initData.error.code !== 'ok') {
+    throw new Error(`TikTok init error: ${initData.error.message}`);
+  }
 
-  const publishId = data.data?.publish_id ?? 'unknown';
+  const uploadUrl = initData.data?.upload_url;
+  const publishId = initData.data?.publish_id ?? 'unknown';
 
-  // TikTok post URL requires username; build a best-effort URL
-  const userRes = await fetch(`${BASE}/user/info/?fields=display_name,open_id`, {
+  if (!uploadUrl) throw new Error('TikTok did not return upload_url');
+
+  // Step 3: Upload video in a single chunk
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'video/mp4',
+      'Content-Range': `bytes 0-${videoSize - 1}/${videoSize}`,
+      'Content-Length': String(videoSize),
+    },
+    body: videoBuffer,
+  });
+
+  if (!uploadRes.ok) throw new Error(`TikTok upload failed: ${await uploadRes.text()}`);
+
+  // Build post URL from user profile
+  const userRes = await fetch(`${BASE}/user/info/?fields=display_name`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   let postUrl = 'https://www.tiktok.com';
