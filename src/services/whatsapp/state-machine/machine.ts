@@ -322,7 +322,9 @@ async function handleWaitingCopy(
 
   // If only one platform connected, skip selection and go straight to media
   const connectedPlatforms = draft.platforms ?? [];
+  console.log('[waiting_copy] connectedPlatforms:', connectedPlatforms);
   if (connectedPlatforms.length <= 1) {
+    console.log('[waiting_copy] skipping platform select (≤1 platform)');
     await transitionTo(session, 'waiting_media_type', newDraft);
     await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
     return;
@@ -339,6 +341,7 @@ async function handleWaitingPlatformSelect(
 ): Promise<void> {
   const input = (message.text ?? '').trim().toLowerCase();
   const connectedPlatforms = draft.platforms ?? [];
+  console.log('[platform-select] input:', input, '| connectedPlatforms:', connectedPlatforms);
 
   let selectedPlatforms: string[];
 
@@ -359,6 +362,7 @@ async function handleWaitingPlatformSelect(
     selectedPlatforms = [...new Set(indices.map((i) => connectedPlatforms[i]))];
   }
 
+  console.log('[platform-select] selectedPlatforms:', selectedPlatforms);
   const newDraft = { ...draft, platforms: selectedPlatforms };
   await transitionTo(session, 'waiting_media_type', newDraft);
   await whatsappService.sendText(message.from, MESSAGES.ASK_MEDIA_TYPE);
