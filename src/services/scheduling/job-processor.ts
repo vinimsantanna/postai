@@ -1,4 +1,5 @@
 import type { Job } from 'bullmq';
+import type { Platform } from '@prisma/client';
 import { createWorker } from '@/lib/queue';
 import { campaignRepository } from '@/repositories/campaign.repository';
 import { publishToAllPlatforms } from '@/services/publishing/parallel-publisher';
@@ -45,6 +46,7 @@ async function processScheduledPost(job: Job<ScheduledJobData>): Promise<void> {
       coverPhotoUrl: campaign.thumbnailUrl ?? undefined,
     },
     clientId,
+    (campaign.platforms as Platform[]) ?? undefined,
   );
 
   const resultMap: Record<string, { success: boolean; postUrl?: string; error?: string }> = {};
