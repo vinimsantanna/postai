@@ -4,8 +4,8 @@
  */
 
 const BASE = 'https://graph.instagram.com/v21.0';
-const POLL_INTERVAL_MS = 3_000;
-const POLL_MAX_ATTEMPTS = 20;
+const POLL_INTERVAL_MS = 5_000;
+const POLL_MAX_ATTEMPTS = 60; // 5s × 60 = 5 min max for large videos
 
 export interface InstagramPublishResult {
   postId: string;
@@ -157,6 +157,7 @@ async function pollContainerReady(containerId: string, accessToken: string): Pro
     }
     await sleep(POLL_INTERVAL_MS);
   }
+  throw new Error('Instagram video processing timeout — o vídeo pode ser muito grande ou o Instagram está lento. Tente novamente.');
 }
 
 async function getPermalink(mediaId: string, accessToken: string): Promise<string | undefined> {

@@ -122,9 +122,13 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 
 function isTransient(err: Error): boolean {
   const msg = err.message.toLowerCase();
-  // Retry on 5xx, timeouts, network errors
+  // Retry on 5xx server errors, timeouts, network errors — NOT on video processing timeout
+  if (msg.includes('processing timeout')) return false;
   return (
-    msg.includes('5') ||
+    msg.includes('500') ||
+    msg.includes('502') ||
+    msg.includes('503') ||
+    msg.includes('504') ||
     msg.includes('timeout') ||
     msg.includes('econnreset') ||
     msg.includes('econnrefused') ||
