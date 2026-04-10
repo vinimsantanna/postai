@@ -27,7 +27,9 @@ export async function publishToTikTok(
   const initBody: Record<string, unknown> = {
     post_info: {
       title: copy.slice(0, 2200),
-      privacy_level: 'PUBLIC_TO_EVERYONE',
+      // TikTok apps não auditados só podem postar privado.
+      // Após aprovação do app, alterar para 'PUBLIC_TO_EVERYONE'.
+      privacy_level: 'SELF_ONLY',
       disable_comment: false,
       disable_duet: false,
       disable_stitch: false,
