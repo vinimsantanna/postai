@@ -35,7 +35,7 @@ export const MESSAGES = {
   MEDIA_TYPE_INVALID: '❌ Opção inválida. Digite *1* para vídeo ou *2* para foto:',
 
   VIDEO_LARGE_WARNING:
-    '⏳ Vídeo recebido! Estamos processando e publicando...\n\n_Vídeos maiores podem levar alguns minutos. Você receberá uma confirmação quando estiver no ar!_',
+    '✅ Vídeo recebido!\n\n_Aguarde enquanto fazemos o upload..._',
 
   PUBLISHING_STARTED:
     '🚀 *Publicando!*\n\nEstou publicando em todas as suas redes agora. Você receberá uma confirmação com os links em breve!',
