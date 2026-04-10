@@ -43,6 +43,7 @@ export async function runPublish(
         coverPhotoUrl: draft.coverPhotoUrl,
       },
       clientId,
+      platforms,
     );
   } catch (err) {
     await campaignRepository.setResults(campaign.id, {}, 'FAILED');

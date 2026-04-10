@@ -42,8 +42,16 @@ export async function publishToAllPlatforms(
   userId: string,
   input: PublishInput,
   clientId?: string,
+  platforms?: Platform[],
 ): Promise<PlatformResult[]> {
   let tokens = await apiTokenRepository.findByUser(userId, clientId);
+
+  if (tokens.length === 0) return [];
+
+  // Filter to only selected platforms if provided
+  if (platforms && platforms.length > 0) {
+    tokens = tokens.filter((t) => platforms.includes(t.platform));
+  }
 
   if (tokens.length === 0) return [];
 
