@@ -31,6 +31,7 @@ export async function publishToTikTok(
       disable_comment: false,
       disable_duet: false,
       disable_stitch: false,
+      ...(thumbnailUrl && { cover_url: thumbnailUrl }),
     },
     source_info: {
       source: 'FILE_UPLOAD',
