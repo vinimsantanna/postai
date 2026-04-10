@@ -113,15 +113,20 @@ async function decryptWhatsAppMedia(
  * Images already within 4:5–1.91:1 are returned unchanged.
  */
 async function cropToInstagramRatio(buffer: Buffer): Promise<Buffer> {
-  const meta = await sharp(buffer).metadata();
+  // Apply EXIF auto-rotation first so width/height reflect true visual dimensions.
+  // Phone portraits are stored as landscape bytes + EXIF rotate flag — without this
+  // step the ratio check uses raw (pre-rotation) dimensions and skips the crop.
+  const rotated = await sharp(buffer).rotate().toBuffer();
+
+  const meta = await sharp(rotated).metadata();
   const { width = 0, height = 0 } = meta;
-  if (!width || !height) return buffer;
+  if (!width || !height) return rotated;
 
   const ratio = width / height;
   const MIN_RATIO = 4 / 5;  // 0.8  — max portrait
   const MAX_RATIO = 1.91;   // max landscape
 
-  if (ratio >= MIN_RATIO && ratio <= MAX_RATIO) return buffer; // already valid
+  if (ratio >= MIN_RATIO && ratio <= MAX_RATIO) return rotated; // already valid
 
   let newWidth: number;
   let newHeight: number;
@@ -136,7 +141,7 @@ async function cropToInstagramRatio(buffer: Buffer): Promise<Buffer> {
     newHeight = height;
   }
 
-  return sharp(buffer)
+  return sharp(rotated)
     .resize(newWidth, newHeight, { fit: 'cover', position: 'centre' })
     .jpeg({ quality: 90 })
     .toBuffer();
