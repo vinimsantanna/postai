@@ -129,8 +129,11 @@ function summarizeError(error: string): string {
       if (code === 200 || code === 10) {
         return 'Permissão negada — reconecte e aceite todas as permissões';
       }
-      if (code === 9007 || sub === 2207035 || sub === 2207001) {
+      if (sub === 2207035 || sub === 2207001) {
         return 'Proporção da imagem inválida para o feed — use entre 4:5 (retrato) e 1.91:1 (paisagem)';
+      }
+      if (sub === 2207027 || sub === 2207026) {
+        return 'Instagram ainda processando a mídia — tente novamente em alguns segundos';
       }
       if (code === 100) {
         // code 100 = invalid parameter (not necessarily auth) — show the real message

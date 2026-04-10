@@ -66,7 +66,8 @@ export async function publishInstagramStory(
   if (!containerRes.ok) throw new Error(`Instagram story container failed: ${await containerRes.text()}`);
   const { id: containerId } = (await containerRes.json()) as { id: string };
 
-  if (videoUrl) await pollContainerReady(containerId, accessToken);
+  // Always poll — photos also need processing time before media_publish
+  await pollContainerReady(containerId, accessToken);
 
   const publishRes = await fetch(`${BASE}/${me.id}/media_publish`, {
     method: 'POST',
@@ -146,6 +147,9 @@ async function publishPhoto(
     throw new Error(`Instagram photo container failed: ${body}`);
   }
   const { id: containerId } = (await containerRes.json()) as { id: string };
+
+  // Photos also need processing time before media_publish
+  await pollContainerReady(containerId, accessToken);
 
   const publishRes = await fetch(`${BASE}/${igUserId}/media_publish`, {
     method: 'POST',
