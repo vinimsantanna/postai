@@ -8,7 +8,7 @@ const TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
 const REVOKE_URL = 'https://open.tiktokapis.com/v2/oauth/revoke/';
 const USERINFO_URL = 'https://open.tiktokapis.com/v2/user/info/';
 
-const SCOPES = ['video.upload', 'user.info.basic'].join(',');
+const SCOPES = ['video.upload', 'video.publish', 'user.info.basic'].join(',');
 
 function getConfig() {
   const clientKey = process.env.TIKTOK_CLIENT_KEY;
