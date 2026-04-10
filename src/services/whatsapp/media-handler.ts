@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import axios from 'axios';
+import sharp from 'sharp';
 import { supabaseStorage } from '@/lib/supabase';
 
 // HKDF info strings per WhatsApp media type
@@ -107,6 +108,33 @@ async function decryptWhatsAppMedia(
 }
 
 /**
+ * Crops image to 4:5 aspect ratio (Instagram feed max portrait).
+ * Uses center-gravity crop so the main subject is preserved.
+ * Images already within 4:5–1.91:1 are returned unchanged.
+ */
+async function cropToInstagramRatio(buffer: Buffer): Promise<Buffer> {
+  const meta = await sharp(buffer).metadata();
+  const { width = 0, height = 0 } = meta;
+  if (!width || !height) return buffer;
+
+  const ratio = width / height;
+  const MIN_RATIO = 4 / 5;   // 0.8  — max portrait
+  const MAX_RATIO = 1.91;    // landscape
+
+  if (ratio >= MIN_RATIO && ratio <= MAX_RATIO) return buffer; // already valid
+
+  // Target: 4:5 for portrait images, 1.91:1 for landscape
+  const targetRatio = ratio < MIN_RATIO ? MIN_RATIO : MAX_RATIO;
+  const newWidth = ratio < MIN_RATIO ? Math.round(height * targetRatio) : width;
+  const newHeight = ratio < MIN_RATIO ? height : Math.round(width / targetRatio);
+
+  return sharp(buffer)
+    .resize(newWidth, newHeight, { fit: 'cover', position: 'centre' })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+}
+
+/**
  * Uploads media to permanent storage (Supabase).
  *
  * mediaUrl can be:
@@ -135,6 +163,11 @@ export async function persistMedia(
     buffer = await decryptWhatsAppMedia(mediaUrl, mediaKey, whatsappMediaType ?? 'document');
   } else {
     throw new Error('[media-handler] Cannot fetch media: no base64 and no mediaKey');
+  }
+
+  // Crop images to 4:5 aspect ratio for Instagram feed compatibility
+  if (type === 'image') {
+    buffer = await cropToInstagramRatio(buffer);
   }
 
   return supabaseStorage.upload(path, buffer, contentType);
