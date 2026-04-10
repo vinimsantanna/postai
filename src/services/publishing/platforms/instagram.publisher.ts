@@ -89,7 +89,7 @@ async function publishReel(
     caption: copy,
     access_token: accessToken,
   };
-  if (coverPhotoUrl) containerBody.cover_url = coverPhotoUrl;
+  if (coverPhotoUrl) containerBody.cover_url = toInstagramAspectRatio(coverPhotoUrl);
 
   const containerRes = await fetch(`${BASE}/${igUserId}/media`, {
     method: 'POST',
@@ -113,6 +113,17 @@ async function publishReel(
   return { postId: mediaId, postUrl: permalink ?? `https://www.instagram.com/reel/${mediaId}` };
 }
 
+/**
+ * Applies Cloudinary auto-crop transformation to fit Instagram feed aspect ratio (4:5).
+ * Only modifies Cloudinary URLs — other URLs are returned as-is.
+ * Uses c_fill (centered crop) + g_auto (smart gravity) to preserve the main subject.
+ */
+function toInstagramAspectRatio(url: string): string {
+  if (!url.includes('res.cloudinary.com')) return url;
+  // Insert transformation after /upload/
+  return url.replace('/upload/', '/upload/c_fill,ar_4:5,w_1080,g_auto/');
+}
+
 async function publishPhoto(
   igUserId: string,
   accessToken: string,
@@ -123,7 +134,7 @@ async function publishPhoto(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      image_url: photoUrl,
+      image_url: toInstagramAspectRatio(photoUrl),
       caption: copy,
       access_token: accessToken,
     }),
