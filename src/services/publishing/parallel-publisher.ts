@@ -65,6 +65,10 @@ export async function publishToAllPlatforms(
   if (refreshJobs.length > 0) {
     await Promise.all(refreshJobs);
     tokens = await apiTokenRepository.findByUser(userId, clientId);
+    // Re-apply the same platform filter after token refresh
+    if (platforms && platforms.length > 0) {
+      tokens = tokens.filter((t) => platforms.includes(t.platform));
+    }
   }
 
   const tasks = tokens.map((token) =>
