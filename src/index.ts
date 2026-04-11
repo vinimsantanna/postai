@@ -4,11 +4,12 @@ import prisma from '@/lib/prisma';
 import { startSchedulerWorker } from '@/services/scheduling/job-processor';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
+const DEPLOY_ID = Date.now().toString(36).toUpperCase(); // unique per container start
 
 async function main(): Promise<void> {
   // Start HTTP server first — Railway healthcheck needs it up quickly
   const server = app.listen(PORT, () => {
-    console.log(`[server] PostAI API running on port ${PORT} (${process.env.NODE_ENV})`);
+    console.log(`[server] PostAI API running on port ${PORT} (${process.env.NODE_ENV}) deploy=${DEPLOY_ID}`);
   });
 
   // Connect to DB after server is up (non-fatal on startup)

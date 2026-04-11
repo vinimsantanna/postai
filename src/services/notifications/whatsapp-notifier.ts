@@ -17,6 +17,7 @@ export interface NotifyInput {
  */
 export async function notifyPublishResult(input: NotifyInput): Promise<void> {
   const { phoneNumber, results, clientName, isAgency } = input;
+  console.log('[notifier] results:', results.map((r) => ({ platform: r.platform, success: r.success, error: r.error?.slice(0, 60) })));
   const message = buildNotificationMessage(results, clientName, isAgency);
   await whatsappService.sendText(phoneNumber, message);
 }
